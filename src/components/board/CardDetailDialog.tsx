@@ -32,7 +32,7 @@ export function CardDetailDialog({ cardId, onClose }: CardDetailDialogProps) {
         if (!next) onClose();
       }}
     >
-      <DialogContent className="max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>카드 편집</DialogTitle>
         </DialogHeader>

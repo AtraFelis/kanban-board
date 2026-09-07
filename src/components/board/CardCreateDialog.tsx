@@ -27,7 +27,7 @@ export function CardCreateDialog({ columnId, onClose }: CardCreateDialogProps) {
         if (!next) onClose();
       }}
     >
-      <DialogContent className="max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>카드 추가</DialogTitle>
         </DialogHeader>

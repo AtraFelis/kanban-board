@@ -5,7 +5,8 @@ use tauri::{
 };
 
 // 창이 이 높이 아래로는 줄지 않도록 하는 최소 높이.
-const MIN_WINDOW_HEIGHT: f64 = 420.0;
+// 카드 추가/편집 팝업(기본 폼)이 내부 스크롤 없이 다 보이는 높이 기준.
+const MIN_WINDOW_HEIGHT: f64 = 780.0;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
