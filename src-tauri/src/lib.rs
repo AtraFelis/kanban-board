@@ -109,6 +109,11 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         // 파일 저장/열기 다이얼로그 (JSON 내보내기/가져오기)
         .plugin(tauri_plugin_dialog::init())
+        // Windows 시작 시 자동 실행 (프론트에서 토글)
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            None,
+        ))
         // 로컬 저장: 프론트엔드가 %APPDATA% 하위 JSON 파일에 보드 데이터를 읽고 쓴다.
         .plugin(tauri_plugin_store::Builder::new().build())
         // 창 위치·크기를 재시작해도 기억한다. 표시 여부는 저장하지 않는다

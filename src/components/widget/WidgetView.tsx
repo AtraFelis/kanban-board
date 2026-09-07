@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { getAutostart, setAutostart } from "@/lib/autostart";
 import { exportBoardToFile, importBoardFromFile } from "@/lib/boardIO";
 import { COLUMN_GRID_STYLE } from "@/lib/columnGrid";
 import { dueColorClass, dueStatus } from "@/lib/date";
@@ -55,9 +56,11 @@ export function WidgetView() {
   const [quickTitle, setQuickTitle] = useState("");
   const [openCardId, setOpenCardId] = useState<string | null>(null);
   const [locked, setLocked] = useState(getWidgetLocked);
+  const [autostart, setAutostartState] = useState(false);
 
   useEffect(() => {
     void init();
+    void getAutostart().then(setAutostartState);
   }, [init]);
 
   // 잠금 상태를 저장하고 창에 반영한다 (첫 마운트 포함).
@@ -65,6 +68,12 @@ export function WidgetView() {
     setWidgetLocked(locked);
     void applyPinToWindow(locked);
   }, [locked]);
+
+  function toggleAutostart() {
+    const next = !autostart;
+    setAutostartState(next);
+    void setAutostart(next);
+  }
 
   function submitQuick(event: React.FormEvent) {
     event.preventDefault();
@@ -103,6 +112,11 @@ export function WidgetView() {
             <DropdownMenuContent align="end">
               <DropdownMenuItem onSelect={() => setLocked((v) => !v)}>
                 {locked ? "바탕화면 고정 해제" : "바탕화면에 고정"}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={toggleAutostart}>
+                {autostart
+                  ? "✓ 시작 시 자동 실행"
+                  : "시작 시 자동 실행"}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
