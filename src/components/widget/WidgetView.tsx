@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { ask } from "@tauri-apps/plugin-dialog";
 import { getCurrentWindow, Window } from "@tauri-apps/api/window";
 
 import { CardContextMenu } from "@/components/board/CardContextMenu";
+import { CardCreateDialog } from "@/components/board/CardCreateDialog";
 import { CardDetailDialog } from "@/components/board/CardDetailDialog";
+import { ColumnContextMenu } from "@/components/board/ColumnContextMenu";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -32,9 +35,7 @@ async function openFullBoard() {
   }
 }
 
-// "바탕화면에 고정" 상태를 창에 반영한다.
-// - 크기 조절 불가 (드래그 영역 제거는 렌더에서 처리)
-// - 항상 다른 창들 뒤로 (Rust set_widget_pinned가 z-order/NOACTIVATE 처리)
+// "바탕화면에 고정" 상태를 창에 반영한다 (크기 조절 불가 + 항상 다른 창들 뒤).
 async function applyPinToWindow(pinned: boolean) {
   try {
     await getCurrentWindow().setResizable(!pinned);
@@ -44,17 +45,15 @@ async function applyPinToWindow(pinned: boolean) {
   }
 }
 
-// 바탕화면에 상주하는 작은 보드. 컬럼을 그리드로 배치하고, 카드 우클릭으로
-// 수정/이동/삭제, 하단에서 빠른 추가.
+// 바탕화면에 상주하는 작은 보드. 더블클릭·우클릭으로 카드 추가, 카드 우클릭으로 수정/이동/삭제.
 export function WidgetView() {
   const board = useBoardStore((s) => s.board);
   const isLoaded = useBoardStore((s) => s.isLoaded);
   const init = useBoardStore((s) => s.init);
-  const addCard = useBoardStore((s) => s.addCard);
   const replaceBoard = useBoardStore((s) => s.replaceBoard);
 
-  const [quickTitle, setQuickTitle] = useState("");
   const [openCardId, setOpenCardId] = useState<string | null>(null);
+  const [createColumnId, setCreateColumnId] = useState<string | null>(null);
   const [locked, setLocked] = useState(getWidgetLocked);
   const [autostart, setAutostartState] = useState(false);
 
@@ -75,15 +74,6 @@ export function WidgetView() {
     void setAutostart(next);
   }
 
-  function submitQuick(event: React.FormEvent) {
-    event.preventDefault();
-    const trimmed = quickTitle.trim();
-    const firstColumnId = board?.columns[0]?.id;
-    if (!trimmed || !firstColumnId) return;
-    addCard(firstColumnId, { title: trimmed });
-    setQuickTitle("");
-  }
-
   return (
     <div className="flex h-screen flex-col gap-2 rounded-xl border bg-background/95 p-2 text-sm shadow-lg backdrop-blur">
       {/* 잠겨 있지 않을 때만 이 영역을 잡고 창을 옮길 수 있다 */}
@@ -93,7 +83,10 @@ export function WidgetView() {
           locked ? "" : "cursor-move"
         }`}
       >
-        <span {...(locked ? {} : { "data-tauri-drag-region": true })} className="font-semibold">
+        <span
+          {...(locked ? {} : { "data-tauri-drag-region": true })}
+          className="font-semibold"
+        >
           칸반보드
         </span>
         <div className="flex items-center gap-1">
@@ -114,9 +107,7 @@ export function WidgetView() {
                 {locked ? "바탕화면 고정 해제" : "바탕화면에 고정"}
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={toggleAutostart}>
-                {autostart
-                  ? "✓ 시작 시 자동 실행"
-                  : "시작 시 자동 실행"}
+                {autostart ? "✓ 시작 시 자동 실행" : "시작 시 자동 실행"}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -158,26 +149,19 @@ export function WidgetView() {
               column={column}
               board={board}
               onOpenCard={setOpenCardId}
+              onOpenCreate={setCreateColumnId}
             />
           ))}
         </div>
       )}
 
-      <form onSubmit={submitQuick} className="flex gap-1">
-        <Input
-          value={quickTitle}
-          onChange={(e) => setQuickTitle(e.target.value)}
-          placeholder="빠른 추가"
-          className="h-8"
-        />
-        <Button type="submit" size="sm" disabled={!quickTitle.trim()}>
-          추가
-        </Button>
-      </form>
-
       <CardDetailDialog
         cardId={openCardId}
         onClose={() => setOpenCardId(null)}
+      />
+      <CardCreateDialog
+        columnId={createColumnId}
+        onClose={() => setCreateColumnId(null)}
       />
     </div>
   );
@@ -187,22 +171,86 @@ function WidgetColumn({
   column,
   board,
   onOpenCard,
+  onOpenCreate,
 }: {
   column: Column;
   board: Board;
   onOpenCard: (cardId: string) => void;
+  onOpenCreate: (columnId: string) => void;
 }) {
+  const renameColumn = useBoardStore((s) => s.renameColumn);
+  const removeColumn = useBoardStore((s) => s.removeColumn);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState(column.title);
+
   const cards = column.cardIds
     .map((id) => board.cards[id])
     .filter((card): card is NonNullable<typeof card> => Boolean(card));
 
+  function startRename() {
+    setTitleDraft(column.title);
+    setIsEditingTitle(true);
+  }
+
+  function commitTitle() {
+    const trimmed = titleDraft.trim();
+    if (trimmed && trimmed !== column.title) renameColumn(column.id, trimmed);
+    else setTitleDraft(column.title);
+    setIsEditingTitle(false);
+  }
+
+  async function confirmDelete() {
+    const ok = await ask(
+      `"${column.title}" 컬럼을 삭제하면 이 컬럼의 카드도 모두 삭제됩니다.\n계속할까요?`,
+      { title: "컬럼 삭제", kind: "warning", okLabel: "삭제", cancelLabel: "취소" },
+    );
+    if (ok) removeColumn(column.id);
+  }
+
   return (
-    <div className="flex min-w-0 flex-col gap-1 rounded-md bg-muted/50 p-1">
-      <span className="truncate px-1 text-xs font-medium">
-        {column.title}{" "}
-        <span className="font-normal text-muted-foreground">{cards.length}</span>
-      </span>
-      <div className="flex flex-col gap-1 overflow-y-auto">
+    <ColumnContextMenu
+      className="flex min-w-0 flex-col gap-1 rounded-md bg-muted/50 p-1"
+      onAddCard={() => onOpenCreate(column.id)}
+      onRename={startRename}
+      onDelete={confirmDelete}
+      onDoubleClick={(e) => {
+        if (e.target === e.currentTarget) onOpenCreate(column.id);
+      }}
+    >
+      {isEditingTitle ? (
+        <Input
+          autoFocus
+          value={titleDraft}
+          onChange={(e) => setTitleDraft(e.target.value)}
+          onBlur={commitTitle}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") commitTitle();
+            if (e.key === "Escape") {
+              setTitleDraft(column.title);
+              setIsEditingTitle(false);
+            }
+          }}
+          className="h-6 text-xs"
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={startRename}
+          className="truncate rounded px-1 text-left text-xs font-medium hover:bg-accent"
+        >
+          {column.title}{" "}
+          <span className="font-normal text-muted-foreground">
+            {cards.length}
+          </span>
+        </button>
+      )}
+
+      <div
+        onDoubleClick={(e) => {
+          if (e.target === e.currentTarget) onOpenCreate(column.id);
+        }}
+        className="flex min-h-[32px] flex-col gap-1"
+      >
         {cards.map((card) => {
           const doneCount = card.checklist.filter((i) => i.done).length;
           const hasMeta =
@@ -248,7 +296,12 @@ function WidgetColumn({
             </CardContextMenu>
           );
         })}
+        {cards.length === 0 && (
+          <p className="pointer-events-none px-1 text-[10px] text-muted-foreground">
+            더블클릭 / 우클릭으로 카드 추가
+          </p>
+        )}
       </div>
-    </div>
+    </ColumnContextMenu>
   );
 }
