@@ -73,36 +73,38 @@ interface Board {
 
 ## 단계별 작업 목록
 
-### Phase 0 — 환경 셋업 & 위젯 전제 검증
-- [ ] `npm create tauri-app@latest`로 React + TypeScript + Vite 템플릿 초기화
-- [ ] Tailwind CSS, shadcn/ui 설치 및 기본 설정
-- [ ] 빈 창을 always-on-top으로 띄우기 (tauri.conf.json / WindowBuilder)
-- [ ] 트레이 아이콘 추가, 클릭 시 창 보이기/숨기기 동작 확인
-- [ ] **완료 기준**: 트레이 아이콘 클릭으로 항상 위 고정 창이 토글되는 것을 확인
+### Phase 0 — 환경 셋업 & 위젯 전제 검증  ✅ (PR #1~#3 머지)
+- [x] `npm create tauri-app@latest`로 React + TypeScript + Vite 템플릿 초기화
+- [x] Tailwind CSS, shadcn/ui 설치 및 기본 설정
+- [x] 빈 창을 always-on-top으로 띄우기 (tauri.conf.json / WindowBuilder)
+- [x] 트레이 아이콘 추가, 클릭 시 창 보이기/숨기기 동작 확인
+- [x] **완료 기준**: 트레이 아이콘 클릭으로 항상 위 고정 창이 토글되는 것을 확인
 
-### Phase 1 — 칸반보드 코어 (풀보드 모드)
-- [ ] Board/Column/Card 타입 정의 및 Zustand 스토어 구성
-- [ ] tauri-plugin-store 연동, 앱 시작 시 로드 / 변경 시 자동 저장
-- [ ] 컬럼·카드 생성/수정/삭제 UI
-- [ ] @dnd-kit으로 카드 드래그 앤 드롭 (컬럼 내 순서 변경, 컬럼 간 이동)
-- [ ] 카드 상세 패널 (제목/설명/마감일/라벨/체크리스트 편집)
-- [ ] **완료 기준**: 풀보드 모드만으로 칸반보드가 독립적으로 완결 동작
+### Phase 1 — 칸반보드 코어 (풀보드 모드)  ✅ (PR #4·#5 머지)
+- [x] Board/Column/Card 타입 정의 및 Zustand 스토어 구성
+- [x] tauri-plugin-store 연동, 앱 시작 시 로드 / 변경 시 자동 저장
+- [x] 컬럼·카드 생성/수정/삭제 UI
+- [x] @dnd-kit으로 카드 드래그 앤 드롭 (컬럼 내 순서 변경, 컬럼 간 이동)
+- [x] 카드 상세 패널 (제목/설명/마감일/라벨/체크리스트 편집)
+- [x] **완료 기준**: 풀보드 모드만으로 칸반보드가 독립적으로 완결 동작
 
-### Phase 2 — 위젯 모드
-- [ ] 축소된 위젯 창 UI 구현 (오늘 마감/최근 카드 요약, 빠른 추가 입력창)
-- [ ] 위젯 ↔ 풀보드 모드 전환 로직 (트레이 클릭 + 단축키 `Ctrl+Alt+K`)
-- [ ] tauri-plugin-positioner로 위젯 창 위치 기억
-- [ ] 두 모드가 동일 데이터를 실시간 반영하는지 확인
-- [ ] **완료 기준**: 위젯에서 추가한 카드가 풀보드에 즉시 반영, 반대도 동일
+### Phase 2 — 위젯 모드  ✅ (PR #6·#7 머지)
+- [x] 축소된 위젯 창 UI 구현 (실제: 요약 대신 컬럼 그리드 축소판 + 카드 dnd. 빠른 추가 폼은 이후 제거, 더블/우클릭 추가로 통일)
+- [x] 위젯 ↔ 풀보드 모드 전환 로직 (트레이 클릭 + 단축키 `Ctrl+Alt+K`)
+- [x] 위젯 창 위치 기억 (실제: `tauri-plugin-positioner` 대신 `tauri-plugin-window-state` POSITION|SIZE)
+- [x] 두 모드가 동일 데이터를 실시간 반영하는지 확인 (Tauri 이벤트 `board:updated`)
+- [x] **완료 기준**: 위젯에서 추가한 카드가 풀보드에 즉시 반영, 반대도 동일
 
-### Phase 3 — 상시 실행 편의 기능
-- [ ] 마감 임박 카드 위젯 강조 표시
-- [ ] tauri-plugin-autostart로 Windows 시작 시 자동 실행 옵션
-- [ ] 데이터 내보내기/가져오기(JSON 백업) — 로컬 전용 저장의 유일한 안전장치이므로 우선순위 높게
+### Phase 3 — 상시 실행 편의 기능  ✅ (PR #8·#9 머지)
+- [x] 마감 임박 카드 위젯 강조 표시
+- [x] tauri-plugin-autostart로 Windows 시작 시 자동 실행 옵션
+- [x] 데이터 내보내기/가져오기(JSON 백업) — 로컬 전용 저장의 유일한 안전장치이므로 우선순위 높게
 - [ ] **완료 기준**: PC 재부팅 후에도 위젯이 자동으로 뜨고 데이터가 보존됨
+      → 패키징 빌드가 있어야 검증 가능. Phase 4 설치 후 함께 확인한다.
 
-### Phase 4 — 패키징 & 배포
-- [ ] Tauri 번들러로 Windows 설치 파일(.msi) 빌드
+### Phase 4 — 패키징 & 배포  (진행 중, `.claude/plan-phase4.md`)
+- [ ] Tauri 번들러로 Windows 설치 파일(.msi) 빌드 (`bundle.targets: ["msi"]`)
+- [ ] 설치 → autostart 켜고 재부팅 → 위젯 자동 실행 + 데이터 보존 (= Phase 3 게이트)
 - [ ] 며칠간 상시 실행하며 메모리 누수, 자동 저장 안정성 점검
 - [ ] **완료 기준**: 설치 파일로 새 환경에 설치 후 정상 동작 확인
 
