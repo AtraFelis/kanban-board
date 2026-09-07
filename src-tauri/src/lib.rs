@@ -5,6 +5,7 @@ use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     AppHandle, Manager, WebviewWindow, WindowEvent,
 };
+use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_global_shortcut::ShortcutState;
 use tauri_plugin_window_state::StateFlags;
 
@@ -55,6 +56,39 @@ fn set_widget_pinned(app: AppHandle, pinned: bool) {
     }
 }
 
+// 보드 JSON을 사용자가 고른 파일로 저장한다. 취소하면 Ok(false).
+#[tauri::command]
+fn export_board(app: AppHandle, json: String) -> Result<bool, String> {
+    let Some(path) = app
+        .dialog()
+        .file()
+        .add_filter("JSON", &["json"])
+        .set_file_name("kanban-board.json")
+        .blocking_save_file()
+    else {
+        return Ok(false);
+    };
+    let path = path.into_path().map_err(|e| e.to_string())?;
+    std::fs::write(path, json).map_err(|e| e.to_string())?;
+    Ok(true)
+}
+
+// 사용자가 고른 JSON 파일 내용을 문자열로 돌려준다. 취소하면 Ok(None).
+#[tauri::command]
+fn import_board(app: AppHandle) -> Result<Option<String>, String> {
+    let Some(path) = app
+        .dialog()
+        .file()
+        .add_filter("JSON", &["json"])
+        .blocking_pick_file()
+    else {
+        return Ok(None);
+    };
+    let path = path.into_path().map_err(|e| e.to_string())?;
+    let content = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
+    Ok(Some(content))
+}
+
 // label 창을 보이기/숨기기 토글한다.
 fn toggle_window(app: &AppHandle, label: &str) {
     let Some(window) = app.get_webview_window(label) else {
@@ -73,6 +107,8 @@ fn toggle_window(app: &AppHandle, label: &str) {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        // 파일 저장/열기 다이얼로그 (JSON 내보내기/가져오기)
+        .plugin(tauri_plugin_dialog::init())
         // 로컬 저장: 프론트엔드가 %APPDATA% 하위 JSON 파일에 보드 데이터를 읽고 쓴다.
         .plugin(tauri_plugin_store::Builder::new().build())
         // 창 위치·크기를 재시작해도 기억한다. 표시 여부는 저장하지 않는다
@@ -152,7 +188,12 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![greet, set_widget_pinned])
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            set_widget_pinned,
+            export_board,
+            import_board
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

@@ -11,15 +11,19 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { exportBoardToFile, importBoardFromFile } from "@/lib/boardIO";
 import { useBoardStore } from "@/store/boardStore";
 
 // 보드 제목 + 보드 메뉴(⋯). 컬럼 추가는 여기 메뉴에서 한다.
 // 이후 Phase 3의 JSON 내보내기/가져오기 등도 이 메뉴에 붙는다.
 export function BoardHeader({ title }: { title: string }) {
   const addColumn = useBoardStore((s) => s.addColumn);
+  const board = useBoardStore((s) => s.board);
+  const replaceBoard = useBoardStore((s) => s.replaceBoard);
   const [addOpen, setAddOpen] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
 
@@ -47,6 +51,19 @@ export function BoardHeader({ title }: { title: string }) {
         <DropdownMenuContent align="end">
           <DropdownMenuItem onSelect={() => setAddOpen(true)}>
             컬럼 추가
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onSelect={() => {
+              if (board) void exportBoardToFile(board);
+            }}
+          >
+            내보내기 (JSON)
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={() => void importBoardFromFile(replaceBoard)}
+          >
+            가져오기 (JSON)
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

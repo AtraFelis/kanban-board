@@ -9,9 +9,11 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { exportBoardToFile, importBoardFromFile } from "@/lib/boardIO";
 import { COLUMN_GRID_STYLE } from "@/lib/columnGrid";
 import { todayISODate } from "@/lib/date";
 import { getWidgetLocked, setWidgetLocked } from "@/lib/widgetSettings";
@@ -48,6 +50,7 @@ export function WidgetView() {
   const isLoaded = useBoardStore((s) => s.isLoaded);
   const init = useBoardStore((s) => s.init);
   const addCard = useBoardStore((s) => s.addCard);
+  const replaceBoard = useBoardStore((s) => s.replaceBoard);
 
   const [quickTitle, setQuickTitle] = useState("");
   const [openCardId, setOpenCardId] = useState<string | null>(null);
@@ -100,6 +103,19 @@ export function WidgetView() {
             <DropdownMenuContent align="end">
               <DropdownMenuItem onSelect={() => setLocked((v) => !v)}>
                 {locked ? "바탕화면 고정 해제" : "바탕화면에 고정"}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onSelect={() => {
+                  if (board) void exportBoardToFile(board);
+                }}
+              >
+                내보내기 (JSON)
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => void importBoardFromFile(replaceBoard)}
+              >
+                가져오기 (JSON)
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

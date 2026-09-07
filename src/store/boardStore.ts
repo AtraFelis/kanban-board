@@ -60,6 +60,8 @@ interface BoardState {
   init: () => Promise<void>;
   // 다른 창의 변경을 반영하기 위해 디스크에서 다시 읽는다. (자동 저장을 유발하지 않음)
   reload: () => Promise<void>;
+  // 가져오기 등으로 보드 전체를 교체한다. (자동 저장·다른 창 알림은 그대로 발생)
+  replaceBoard: (board: Board) => void;
 
   addColumn: (title: string) => void;
   renameColumn: (columnId: string, title: string) => void;
@@ -98,6 +100,12 @@ export const useBoardStore = create<BoardState>()(
       });
       isApplyingRemote = false;
     },
+
+    replaceBoard: (board) =>
+      set((state) => {
+        migrate(board);
+        state.board = board;
+      }),
 
     addColumn: (title) =>
       set((state) => {
