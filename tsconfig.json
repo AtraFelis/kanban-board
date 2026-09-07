@@ -6,6 +6,11 @@
     "module": "ESNext",
     "skipLibCheck": true,
 
+    /* 경로 별칭 (@/* -> src/*) — shadcn/ui가 참조. TS 6+에서 baseUrl 없이 tsconfig 기준으로 해석 */
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+
     /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
