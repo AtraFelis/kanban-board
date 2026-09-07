@@ -9,7 +9,10 @@ import type { Board } from "@/types";
 const STORE_FILE = "board.json";
 const BOARD_KEY = "board";
 
-// tauri-plugin-store 핸들은 한 번만 로드해 재사용한다.
+// Tauri 런타임 밖(`npm run dev` 브라우저 미리보기)에서는 plugin-store를 쓸 수 없으므로
+// localStorage로 대체한다. 실제 앱 동작은 항상 Tauri 경로를 탄다.
+const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+
 let storePromise: Promise<Store> | null = null;
 
 function getStore(): Promise<Store> {
@@ -21,6 +24,10 @@ function getStore(): Promise<Store> {
 
 // 저장된 보드를 반환한다. 저장된 적이 없으면 null.
 export async function loadBoard(): Promise<Board | null> {
+  if (!isTauri) {
+    const raw = localStorage.getItem(BOARD_KEY);
+    return raw ? (JSON.parse(raw) as Board) : null;
+  }
   const store = await getStore();
   const board = await store.get<Board>(BOARD_KEY);
   return board ?? null;
@@ -28,6 +35,10 @@ export async function loadBoard(): Promise<Board | null> {
 
 // 보드 전체를 저장하고 즉시 디스크에 flush 한다.
 export async function saveBoard(board: Board): Promise<void> {
+  if (!isTauri) {
+    localStorage.setItem(BOARD_KEY, JSON.stringify(board));
+    return;
+  }
   const store = await getStore();
   await store.set(BOARD_KEY, board);
   await store.save();
