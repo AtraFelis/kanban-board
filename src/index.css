@@ -120,4 +120,9 @@
   body.widget-window {
     background: transparent;
   }
+  /* 보드/위젯 UI는 드래그로 텍스트가 선택되지 않게 하되, 입력 요소는 예외. */
+  input,
+  textarea {
+    user-select: text;
+  }
 }

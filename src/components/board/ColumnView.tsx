@@ -4,6 +4,7 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
+import { ask } from "@tauri-apps/plugin-dialog";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +19,8 @@ interface ColumnViewProps {
   cards: Card[];
   onOpenCard: (cardId: string) => void;
   onOpenCreate: (columnId: string) => void;
+  className?: string;
+  columnMenuExtra?: React.ReactNode;
 }
 
 // 컬럼 한 개: 제목 편집, 카드 목록(드롭 대상), 우클릭·더블클릭으로 카드 추가, 컬럼 삭제.
@@ -26,6 +29,8 @@ export function ColumnView({
   cards,
   onOpenCard,
   onOpenCreate,
+  className,
+  columnMenuExtra,
 }: ColumnViewProps) {
   const renameColumn = useBoardStore((s) => s.renameColumn);
   const removeColumn = useBoardStore((s) => s.removeColumn);
@@ -54,16 +59,18 @@ export function ColumnView({
     setIsEditingTitle(false);
   }
 
-  function confirmDelete() {
-    if (
-      confirm(`"${column.title}" 컬럼을 삭제할까요? 카드도 함께 삭제됩니다.`)
-    ) {
-      removeColumn(column.id);
-    }
+  async function confirmDelete() {
+    const ok = await ask(
+      `"${column.title}" 컬럼을 삭제하면 이 컬럼의 카드도 모두 삭제됩니다.\n계속할까요?`,
+      { title: "컬럼 삭제", kind: "warning", okLabel: "삭제", cancelLabel: "취소" },
+    );
+    if (ok) removeColumn(column.id);
   }
 
   return (
     <ColumnContextMenu
+      className={className}
+      extraItems={columnMenuExtra}
       onAddCard={() => onOpenCreate(column.id)}
       onRename={startRename}
       onDelete={confirmDelete}
@@ -117,7 +124,7 @@ export function ColumnView({
         onDoubleClick={(e) => {
           if (e.target === e.currentTarget) onOpenCreate(column.id);
         }}
-        className={`flex min-h-[60px] flex-1 flex-col gap-2 rounded-md p-0.5 transition-colors ${
+        className={`flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto rounded-md p-0.5 transition-colors ${
           isOver ? "bg-accent/60" : ""
         }`}
       >

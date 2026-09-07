@@ -21,6 +21,8 @@ export interface Card {
   order: number;
   /** 생성 시각 (ISO 8601). 위젯의 "최근 카드" 정렬에 쓴다. */
   createdAt: string;
+  /** 카드 개별 배경색 (CSS 색 문자열). 없으면 기본색. */
+  color?: string;
 }
 
 // 컬럼 한 개. 카드를 id 배열로 참조하며 이 배열 순서가 곧 표시 순서다.

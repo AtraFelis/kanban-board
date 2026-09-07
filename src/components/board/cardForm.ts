@@ -1,16 +1,24 @@
 import { type Card, type ChecklistItem } from "@/types";
 
-// 카드 생성·편집 폼이 공유하는 값 모양. dueDate/description은 "" = 미지정.
+// 카드 생성·편집 폼이 공유하는 값 모양. dueDate/description/color는 "" = 미지정.
 export interface CardFormValue {
   title: string;
   description: string;
   dueDate: string;
   labels: string[];
   checklist: ChecklistItem[];
+  color: string;
 }
 
 export function emptyCardForm(): CardFormValue {
-  return { title: "", description: "", dueDate: "", labels: [], checklist: [] };
+  return {
+    title: "",
+    description: "",
+    dueDate: "",
+    labels: [],
+    checklist: [],
+    color: "",
+  };
 }
 
 export function cardToForm(card: Card): CardFormValue {
@@ -20,6 +28,7 @@ export function cardToForm(card: Card): CardFormValue {
     dueDate: card.dueDate ?? "",
     labels: card.labels,
     checklist: card.checklist,
+    color: card.color ?? "",
   };
 }
 
@@ -31,5 +40,6 @@ export function cardFormToInput(form: CardFormValue) {
     dueDate: form.dueDate || undefined,
     labels: form.labels,
     checklist: form.checklist,
+    color: form.color || undefined,
   };
 }

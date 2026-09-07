@@ -11,7 +11,10 @@
     "core:window:allow-is-visible",
     "core:window:allow-start-dragging",
     "core:window:allow-set-resizable",
+    "core:window:allow-set-always-on-top",
     "opener:default",
-    "store:default"
+    "store:default",
+    "autostart:default",
+    "dialog:default"
   ]
 }

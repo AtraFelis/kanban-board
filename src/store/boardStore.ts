@@ -8,7 +8,7 @@ import type { Board, Card, Column } from "@/types";
 
 // 카드 생성 시 넘길 수 있는 초기 필드. 빠른 추가는 title(+dueDate)만, 상세 추가는 전부 채운다.
 export type NewCardInput = Partial<
-  Pick<Card, "description" | "dueDate" | "labels" | "checklist">
+  Pick<Card, "description" | "dueDate" | "labels" | "checklist" | "color">
 > & {
   title: string;
 };
@@ -50,7 +50,7 @@ function renumber(board: Board, columnId: string): void {
   });
 }
 
-type CardPatch = Partial<Pick<Card, "title" | "description" | "dueDate" | "labels" | "checklist">>;
+type CardPatch = Partial<Pick<Card, "title" | "description" | "dueDate" | "labels" | "checklist" | "color">>;
 
 interface BoardState {
   board: Board | null;
@@ -60,6 +60,8 @@ interface BoardState {
   init: () => Promise<void>;
   // 다른 창의 변경을 반영하기 위해 디스크에서 다시 읽는다. (자동 저장을 유발하지 않음)
   reload: () => Promise<void>;
+  // 가져오기 등으로 보드 전체를 교체한다. (자동 저장·다른 창 알림은 그대로 발생)
+  replaceBoard: (board: Board) => void;
 
   addColumn: (title: string) => void;
   renameColumn: (columnId: string, title: string) => void;
@@ -99,6 +101,12 @@ export const useBoardStore = create<BoardState>()(
       isApplyingRemote = false;
     },
 
+    replaceBoard: (board) =>
+      set((state) => {
+        migrate(board);
+        state.board = board;
+      }),
+
     addColumn: (title) =>
       set((state) => {
         if (!state.board) return;
@@ -134,6 +142,7 @@ export const useBoardStore = create<BoardState>()(
           dueDate: input.dueDate || undefined,
           labels: input.labels ?? [],
           checklist: input.checklist ?? [],
+          color: input.color || undefined,
           order: column.cardIds.length,
           createdAt: new Date().toISOString(),
         };

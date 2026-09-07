@@ -12,6 +12,10 @@ interface ColumnContextMenuProps {
   onDelete: () => void;
   onDoubleClick: (event: React.MouseEvent) => void;
   children: React.ReactNode;
+  // 컬럼 컨테이너 클래스. 풀보드/위젯이 각자 다른 크기감을 준다.
+  className?: string;
+  // 컬럼 메뉴 뒤에 덧붙일 항목 (위젯은 여기에 위젯 설정을 넣는다).
+  extraItems?: React.ReactNode;
 }
 
 // 컬럼의 스타일 컨테이너 겸 우클릭 메뉴(카드 추가 / 이름 변경 / 삭제).
@@ -22,13 +26,17 @@ export function ColumnContextMenu({
   onDelete,
   onDoubleClick,
   children,
+  className = "flex h-full min-h-0 min-w-0 flex-col gap-2 rounded-lg bg-muted/50 p-2",
+  extraItems,
 }: ColumnContextMenuProps) {
   return (
     <ContextMenu modal={false}>
       <ContextMenuTrigger asChild>
         <div
           onDoubleClick={onDoubleClick}
-          className="flex min-w-0 flex-col gap-2 rounded-lg bg-muted/50 p-2"
+          // 상위(위젯) 컨텍스트 메뉴로 우클릭이 번지지 않게 한다.
+          onContextMenu={(e) => e.stopPropagation()}
+          className={className}
         >
           {children}
         </div>
@@ -40,6 +48,12 @@ export function ColumnContextMenu({
         <ContextMenuItem variant="destructive" onSelect={onDelete}>
           컬럼 삭제
         </ContextMenuItem>
+        {extraItems && (
+          <>
+            <ContextMenuSeparator />
+            {extraItems}
+          </>
+        )}
       </ContextMenuContent>
     </ContextMenu>
   );
