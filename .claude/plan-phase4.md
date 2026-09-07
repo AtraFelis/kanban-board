@@ -9,10 +9,14 @@ Phase 3 게이트(재부팅 후 위젯 자동 실행 + 데이터 보존)도 여�
   - `targets: ["msi"]` (NSIS `.exe`는 제외, 계획이 `.msi` 명시)
   - `publisher`, `copyright`, `category`, `shortDescription`, `longDescription` 추가
   - `windows.webviewInstallMode: downloadBootstrapper` (기본값, 설치 파일 경량)
+  - `windows.wix.language: ["ko-KR"]` — productName 등에 한글이 있어 WiX light.exe가
+    코드페이지 1252로 인코딩 못 해 LGHT0311로 실패한다. ko-KR은 코드페이지 949 사용.
 - 빌드: PowerShell에서 `~/.cargo/bin` PATH 추가 후 `npm run tauri build`
-  - 최초 빌드 시 Tauri가 WiX Toolset을 자동 다운로드한다.
-  - 산출물: `src-tauri/target/release/bundle/msi/칸반보드_0.1.0_x64_en-US.msi`
-- 결과물 실행 파일: `src-tauri/target/release/칸반보드.exe`
+  - 최초 빌드 시 Tauri가 WiX Toolset을 자동 다운로드한다. (~1분 40초 릴리스 컴파일 + 번들)
+  - 산출물: `src-tauri/target/release/bundle/msi/칸반보드_0.1.0_x64_ko-KR.msi` (약 2.4MB)
+- 결과물 실행 파일: `src-tauri/target/release/kanban-board.exe` (약 4.9MB)
+- ✅ 빌드 성공 확인됨 (2026-09-08). light.exe ICE 경고(REINSTALLMODE/ICE57/ICE61)는
+  Tauri 기본 템플릿 것으로 무해.
 
 ## 2. 설치 후 스모크 테스트 (설치한 PC)
 
