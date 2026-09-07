@@ -20,9 +20,15 @@ import { getAutostart, setAutostart } from "@/lib/autostart";
 import { exportBoardToFile, importBoardFromFile } from "@/lib/boardIO";
 import { COLUMN_GRID_STYLE } from "@/lib/columnGrid";
 import { dueColorClass, dueStatus } from "@/lib/date";
-import { getWidgetLocked, setWidgetLocked } from "@/lib/widgetSettings";
+import {
+  getWidgetSettings,
+  saveWidgetSettings,
+  type WidgetSettings,
+} from "@/lib/widgetSettings";
 import { useBoardStore } from "@/store/boardStore";
 import type { Board, Column } from "@/types";
+
+import { WidgetSettingsDialog } from "./WidgetSettingsDialog";
 
 // 풀보드 창을 띄운다 (숨겨져 있으면 표시 + 포커스).
 async function openFullBoard() {
@@ -54,17 +60,26 @@ export function WidgetView() {
 
   const [openCardId, setOpenCardId] = useState<string | null>(null);
   const [createColumnId, setCreateColumnId] = useState<string | null>(null);
-  const [locked, setLocked] = useState(getWidgetLocked);
   const [autostart, setAutostartState] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settings, setSettings] = useState<WidgetSettings>(getWidgetSettings);
+  const { locked } = settings;
+
+  function updateSettings(patch: Partial<WidgetSettings>) {
+    setSettings((prev) => {
+      const next = { ...prev, ...patch };
+      saveWidgetSettings(next);
+      return next;
+    });
+  }
 
   useEffect(() => {
     void init();
     void getAutostart().then(setAutostartState);
   }, [init]);
 
-  // 잠금 상태를 저장하고 창에 반영한다 (첫 마운트 포함).
+  // 잠금(바탕화면 고정) 상태를 창에 반영한다 (첫 마운트 포함).
   useEffect(() => {
-    setWidgetLocked(locked);
     void applyPinToWindow(locked);
   }, [locked]);
 
@@ -74,8 +89,27 @@ export function WidgetView() {
     void setAutostart(next);
   }
 
+  // 색 커스터마이즈: null이면 테마 기본. --card / --foreground를 덮으면
+  // bg-card, text-foreground 등이 따라온다.
+  const rootStyle: Record<string, string> = {};
+  if (settings.cardColor) rootStyle["--card"] = settings.cardColor;
+  if (settings.textColor) rootStyle["--foreground"] = settings.textColor;
+
   return (
-    <div className="flex h-screen flex-col gap-2 rounded-xl border bg-background/95 p-2 text-sm shadow-lg backdrop-blur">
+    <div
+      className="relative flex h-screen flex-col gap-2 rounded-xl border p-2 text-sm text-foreground shadow-lg"
+      style={rootStyle as React.CSSProperties}
+    >
+      {/* 배경 레이어: 불투명도만 이 레이어에 적용해 내용은 선명하게 유지 */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 rounded-xl backdrop-blur"
+        style={{
+          backgroundColor: settings.bgColor ?? "var(--background)",
+          opacity: settings.opacity,
+        }}
+      />
+
       {/* 잠겨 있지 않을 때만 이 영역을 잡고 창을 옮길 수 있다 */}
       <div
         {...(locked ? {} : { "data-tauri-drag-region": true })}
@@ -103,11 +137,16 @@ export function WidgetView() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={() => setLocked((v) => !v)}>
+              <DropdownMenuItem
+                onSelect={() => updateSettings({ locked: !locked })}
+              >
                 {locked ? "바탕화면 고정 해제" : "바탕화면에 고정"}
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={toggleAutostart}>
                 {autostart ? "✓ 시작 시 자동 실행" : "시작 시 자동 실행"}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setSettingsOpen(true)}>
+                모양 설정…
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -162,6 +201,12 @@ export function WidgetView() {
       <CardCreateDialog
         columnId={createColumnId}
         onClose={() => setCreateColumnId(null)}
+      />
+      <WidgetSettingsDialog
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        settings={settings}
+        onChange={updateSettings}
       />
     </div>
   );
