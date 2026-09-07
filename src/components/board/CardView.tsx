@@ -24,6 +24,7 @@ export function CardView({ card, onOpen }: CardViewProps) {
           onOpen();
         }
       }}
+      style={card.color ? { backgroundColor: card.color } : undefined}
       className={`rounded-md border bg-card p-2 text-sm shadow-xs ${
         due === "overdue"
           ? "border-l-2 border-l-destructive"

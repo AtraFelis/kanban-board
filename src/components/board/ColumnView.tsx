@@ -20,6 +20,7 @@ interface ColumnViewProps {
   onOpenCard: (cardId: string) => void;
   onOpenCreate: (columnId: string) => void;
   className?: string;
+  columnMenuExtra?: React.ReactNode;
 }
 
 // 컬럼 한 개: 제목 편집, 카드 목록(드롭 대상), 우클릭·더블클릭으로 카드 추가, 컬럼 삭제.
@@ -29,6 +30,7 @@ export function ColumnView({
   onOpenCard,
   onOpenCreate,
   className,
+  columnMenuExtra,
 }: ColumnViewProps) {
   const renameColumn = useBoardStore((s) => s.renameColumn);
   const removeColumn = useBoardStore((s) => s.removeColumn);
@@ -68,6 +70,7 @@ export function ColumnView({
   return (
     <ColumnContextMenu
       className={className}
+      extraItems={columnMenuExtra}
       onAddCard={() => onOpenCreate(column.id)}
       onRename={startRename}
       onDelete={confirmDelete}

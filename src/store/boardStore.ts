@@ -8,7 +8,7 @@ import type { Board, Card, Column } from "@/types";
 
 // 카드 생성 시 넘길 수 있는 초기 필드. 빠른 추가는 title(+dueDate)만, 상세 추가는 전부 채운다.
 export type NewCardInput = Partial<
-  Pick<Card, "description" | "dueDate" | "labels" | "checklist">
+  Pick<Card, "description" | "dueDate" | "labels" | "checklist" | "color">
 > & {
   title: string;
 };
@@ -50,7 +50,7 @@ function renumber(board: Board, columnId: string): void {
   });
 }
 
-type CardPatch = Partial<Pick<Card, "title" | "description" | "dueDate" | "labels" | "checklist">>;
+type CardPatch = Partial<Pick<Card, "title" | "description" | "dueDate" | "labels" | "checklist" | "color">>;
 
 interface BoardState {
   board: Board | null;
@@ -142,6 +142,7 @@ export const useBoardStore = create<BoardState>()(
           dueDate: input.dueDate || undefined,
           labels: input.labels ?? [],
           checklist: input.checklist ?? [],
+          color: input.color || undefined,
           order: column.cardIds.length,
           createdAt: new Date().toISOString(),
         };

@@ -48,6 +48,8 @@ interface BoardColumnsProps {
   onOpenCreate: (columnId: string) => void;
   // 컬럼 컨테이너 클래스 (풀보드/위젯 크기감 분리). 미지정 시 ColumnView 기본값.
   columnClassName?: string;
+  // 컬럼 우클릭 메뉴에 덧붙일 항목 (위젯이 위젯 설정을 넣는다).
+  columnMenuExtra?: React.ReactNode;
 }
 
 // 컬럼 그리드 + 카드 드래그 앤 드롭. 풀보드와 위젯이 공유한다.
@@ -56,6 +58,7 @@ export function BoardColumns({
   onOpenCard,
   onOpenCreate,
   columnClassName,
+  columnMenuExtra,
 }: BoardColumnsProps) {
   const moveCard = useBoardStore((s) => s.moveCard);
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
@@ -131,6 +134,7 @@ export function BoardColumns({
               onOpenCard={onOpenCard}
               onOpenCreate={onOpenCreate}
               className={columnClassName}
+              columnMenuExtra={columnMenuExtra}
             />
           );
         })}

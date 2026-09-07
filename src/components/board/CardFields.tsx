@@ -66,6 +66,26 @@ export function CardFields({ value, onChange }: CardFieldsProps) {
       </label>
 
       <div className="grid gap-1 text-sm">
+        <span className="font-medium">카드 색</span>
+        <div className="flex items-center gap-2">
+          <input
+            type="color"
+            value={value.color || "#ffffff"}
+            onChange={(e) => onChange({ color: e.target.value })}
+            className="size-8 rounded border bg-transparent"
+          />
+          <button
+            type="button"
+            onClick={() => onChange({ color: "" })}
+            disabled={!value.color}
+            className="rounded px-2 py-1 text-xs text-muted-foreground hover:bg-accent disabled:opacity-50"
+          >
+            기본색
+          </button>
+        </div>
+      </div>
+
+      <div className="grid gap-1 text-sm">
         <span className="font-medium">라벨</span>
         {value.labels.length > 0 && (
           <div className="flex flex-wrap items-center gap-1">

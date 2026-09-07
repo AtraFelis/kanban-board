@@ -92,6 +92,35 @@ export function WidgetView() {
   if (settings.cardColor) rootStyle["--card"] = settings.cardColor;
   if (settings.textColor) rootStyle["--foreground"] = settings.textColor;
 
+  // 위젯 설정 항목. 위젯 빈 영역과 컬럼 우클릭 메뉴 양쪽에서 쓴다.
+  const widgetMenuItems = (
+    <>
+      <ContextMenuItem onSelect={() => void openFullBoard()}>
+        풀보드 열기
+      </ContextMenuItem>
+      <ContextMenuItem onSelect={() => updateSettings({ locked: !locked })}>
+        {locked ? "바탕화면 고정 해제" : "바탕화면에 고정"}
+      </ContextMenuItem>
+      <ContextMenuItem onSelect={toggleAutostart}>
+        {autostart ? "✓ 시작 시 자동 실행" : "시작 시 자동 실행"}
+      </ContextMenuItem>
+      <ContextMenuItem onSelect={() => setSettingsOpen(true)}>
+        모양 설정…
+      </ContextMenuItem>
+      <ContextMenuSeparator />
+      <ContextMenuItem
+        onSelect={() => {
+          if (board) void exportBoardToFile(board);
+        }}
+      >
+        내보내기 (JSON)
+      </ContextMenuItem>
+      <ContextMenuItem onSelect={() => void importBoardFromFile(replaceBoard)}>
+        가져오기 (JSON)
+      </ContextMenuItem>
+    </>
+  );
+
   return (
     <>
       <ContextMenu modal={false}>
@@ -120,41 +149,13 @@ export function WidgetView() {
                 onOpenCard={setOpenCardId}
                 onOpenCreate={setCreateColumnId}
                 columnClassName={WIDGET_COLUMN_CLASS}
+                columnMenuExtra={widgetMenuItems}
               />
             )}
           </div>
         </ContextMenuTrigger>
 
-        <ContextMenuContent>
-          <ContextMenuItem onSelect={() => void openFullBoard()}>
-            풀보드 열기
-          </ContextMenuItem>
-          <ContextMenuSeparator />
-          <ContextMenuItem
-            onSelect={() => updateSettings({ locked: !locked })}
-          >
-            {locked ? "바탕화면 고정 해제" : "바탕화면에 고정"}
-          </ContextMenuItem>
-          <ContextMenuItem onSelect={toggleAutostart}>
-            {autostart ? "✓ 시작 시 자동 실행" : "시작 시 자동 실행"}
-          </ContextMenuItem>
-          <ContextMenuItem onSelect={() => setSettingsOpen(true)}>
-            모양 설정…
-          </ContextMenuItem>
-          <ContextMenuSeparator />
-          <ContextMenuItem
-            onSelect={() => {
-              if (board) void exportBoardToFile(board);
-            }}
-          >
-            내보내기 (JSON)
-          </ContextMenuItem>
-          <ContextMenuItem
-            onSelect={() => void importBoardFromFile(replaceBoard)}
-          >
-            가져오기 (JSON)
-          </ContextMenuItem>
-        </ContextMenuContent>
+        <ContextMenuContent>{widgetMenuItems}</ContextMenuContent>
       </ContextMenu>
 
       <CardDetailDialog

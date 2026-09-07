@@ -45,19 +45,19 @@ export function WidgetSettingsDialog({
           <ColorRow
             label="배경색"
             value={settings.bgColor}
-            fallback="#1e1e1e"
+            fallback="#ffffff"
             onChange={(v) => onChange({ bgColor: v })}
           />
           <ColorRow
-            label="카드색"
+            label="기본색 (카드)"
             value={settings.cardColor}
-            fallback="#2a2a2a"
+            fallback="#ffffff"
             onChange={(v) => onChange({ cardColor: v })}
           />
           <ColorRow
             label="글자색"
             value={settings.textColor}
-            fallback="#f5f5f5"
+            fallback="#1e1e1e"
             onChange={(v) => onChange({ textColor: v })}
           />
 
