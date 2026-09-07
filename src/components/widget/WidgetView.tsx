@@ -170,24 +170,46 @@ function WidgetColumn({
         <span className="font-normal text-muted-foreground">{cards.length}</span>
       </span>
       <div className="flex flex-col gap-1 overflow-y-auto">
-        {cards.map((card) => (
-          <CardContextMenu key={card.id} card={card} onOpen={onOpenCard}>
-            <div className="rounded border bg-card px-1.5 py-1">
-              <p className="truncate text-xs font-medium">{card.title}</p>
-              {card.dueDate && (
-                <span
-                  className={
-                    card.dueDate <= today
-                      ? "text-[10px] text-destructive"
-                      : "text-[10px] text-muted-foreground"
-                  }
-                >
-                  📅 {card.dueDate}
-                </span>
-              )}
-            </div>
-          </CardContextMenu>
-        ))}
+        {cards.map((card) => {
+          const doneCount = card.checklist.filter((i) => i.done).length;
+          const hasMeta =
+            Boolean(card.dueDate) ||
+            card.checklist.length > 0 ||
+            card.labels.length > 0;
+          return (
+            <CardContextMenu key={card.id} card={card} onOpen={onOpenCard}>
+              <div className="rounded border bg-card px-1.5 py-1">
+                <p className="truncate text-xs font-medium">{card.title}</p>
+                {hasMeta && (
+                  <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[10px] text-muted-foreground">
+                    {card.dueDate && (
+                      <span
+                        className={
+                          card.dueDate <= today ? "text-destructive" : undefined
+                        }
+                      >
+                        📅 {card.dueDate}
+                      </span>
+                    )}
+                    {card.checklist.length > 0 && (
+                      <span>
+                        ☑ {doneCount}/{card.checklist.length}
+                      </span>
+                    )}
+                    {card.labels.map((label) => (
+                      <span
+                        key={label}
+                        className="rounded bg-secondary px-1 py-0.5"
+                      >
+                        {label}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </CardContextMenu>
+          );
+        })}
       </div>
     </div>
   );
