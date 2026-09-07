@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { dueColorClass, dueStatus } from "@/lib/date";
+import { useBoardStore } from "@/store/boardStore";
 import type { Card } from "@/types";
 
 import { DeleteCardDialog } from "./DeleteCardDialog";
@@ -19,6 +20,8 @@ const CHECKLIST_PREVIEW_LIMIT = 3;
 // 컬럼 안에 놓이는 카드 한 장. 클릭하면 상세 편집 패널을 연다.
 // 설명·체크리스트는 카드에서 바로 보이되, 길면 접어서 클릭 시에만 전체를 보여준다.
 export function CardView({ card, onOpen }: CardViewProps) {
+  const updateCard = useBoardStore((s) => s.updateCard);
+
   const [descOpen, setDescOpen] = useState(false);
   const [listOpen, setListOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -36,17 +39,31 @@ export function CardView({ card, onOpen }: CardViewProps) {
 
   const hasBottomMeta = Boolean(card.dueDate) || card.labels.length > 0;
 
-  // 카드 내부의 버튼(펼침 토글·삭제)이 카드 클릭(편집창 열기)이나
+  // 카드 내부의 컨트롤(펼침 토글·체크박스·삭제)이 카드 클릭(편집창 열기)이나
   // dnd-kit 드래그 시작(pointerdown)으로 번지지 않게 막는다.
   function stopBubble(e: React.SyntheticEvent) {
     e.stopPropagation();
+  }
+
+  function toggleItem(itemId: string) {
+    updateCard(card.id, {
+      checklist: card.checklist.map((i) =>
+        i.id === itemId ? { ...i, done: !i.done } : i,
+      ),
+    });
+  }
+
+  function deleteItem(itemId: string) {
+    updateCard(card.id, {
+      checklist: card.checklist.filter((i) => i.id !== itemId),
+    });
   }
 
   return (
     // group: 호버 시 삭제 버튼 노출. 삭제 확인 다이얼로그는 클릭 가능한 카드 div의
     // 바깥(형제)에 두어야 한다 — React 포털은 이벤트가 컴포넌트 트리를 타고 올라가
     // 카드 안에 있으면 다이얼로그 클릭이 카드 열기로 새어나간다.
-    <div className="group relative">
+    <div className="group">
       <div
         role={onOpen ? "button" : undefined}
         tabIndex={onOpen ? 0 : undefined}
@@ -58,7 +75,7 @@ export function CardView({ card, onOpen }: CardViewProps) {
           }
         }}
         style={card.color ? { backgroundColor: card.color } : undefined}
-        className={`relative rounded-md border bg-card p-2 text-sm shadow-xs ${
+        className={`rounded-md border bg-card p-2 text-sm shadow-xs ${
           due === "overdue"
             ? "border-l-2 border-l-destructive"
             : due === "soon"
@@ -66,23 +83,29 @@ export function CardView({ card, onOpen }: CardViewProps) {
               : ""
         } ${onOpen ? "cursor-pointer hover:border-ring" : ""}`}
       >
-        {onOpen && (
-          <button
-            type="button"
-            aria-label="카드 삭제"
-            onPointerDown={stopBubble}
-            onKeyDown={stopBubble}
-            onClick={(e) => {
-              stopBubble(e);
-              setConfirmDelete(true);
-            }}
-            className="absolute top-1 right-1 flex size-5 items-center justify-center rounded text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100"
-          >
-            ✕
-          </button>
-        )}
-
-        <p className="pr-5 font-medium break-words">{card.title}</p>
+        <div className="flex items-start gap-1.5">
+          <p className="flex-1 font-medium break-words">{card.title}</p>
+          {card.checklist.length > 0 && (
+            <span className="mt-px shrink-0 text-xs text-muted-foreground tabular-nums">
+              {doneCount}/{card.checklist.length}
+            </span>
+          )}
+          {onOpen && (
+            <button
+              type="button"
+              aria-label="카드 삭제"
+              onPointerDown={stopBubble}
+              onKeyDown={stopBubble}
+              onClick={(e) => {
+                stopBubble(e);
+                setConfirmDelete(true);
+              }}
+              className="-mr-0.5 flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100"
+            >
+              ✕
+            </button>
+          )}
+        </div>
 
         {description && (
           <>
@@ -112,7 +135,7 @@ export function CardView({ card, onOpen }: CardViewProps) {
 
         {card.checklist.length > 0 && (
           <div className="mt-1.5">
-            {listLong ? (
+            {listLong && (
               <button
                 type="button"
                 onPointerDown={stopBubble}
@@ -124,29 +147,50 @@ export function CardView({ card, onOpen }: CardViewProps) {
                 className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
               >
                 <span>{listOpen ? "▾" : "▸"}</span>
-                <span>
-                  ☑ 체크리스트 {doneCount}/{card.checklist.length}
-                </span>
+                <span>체크리스트</span>
               </button>
-            ) : (
-              <span className="text-xs text-muted-foreground">
-                ☑ {doneCount}/{card.checklist.length}
-              </span>
             )}
 
             {showItems && (
-              <ul className="mt-1 grid gap-0.5">
+              <ul className={`grid gap-0.5 ${listLong ? "mt-1" : ""}`}>
                 {card.checklist.map((item) => (
                   <li
                     key={item.id}
-                    className={`flex items-start gap-1 text-xs ${
-                      item.done
-                        ? "text-muted-foreground line-through"
-                        : "text-foreground/80"
-                    }`}
+                    className="group/item flex items-start gap-1.5 text-xs"
                   >
-                    <span>{item.done ? "☑" : "☐"}</span>
-                    <span className="break-words">{item.text}</span>
+                    <input
+                      type="checkbox"
+                      checked={item.done}
+                      aria-label={item.text}
+                      onPointerDown={stopBubble}
+                      onClick={stopBubble}
+                      onChange={() => toggleItem(item.id)}
+                      className="mt-0.5 size-3.5 shrink-0"
+                    />
+                    <span
+                      className={`flex-1 break-words ${
+                        item.done
+                          ? "text-muted-foreground line-through"
+                          : "text-foreground/80"
+                      }`}
+                    >
+                      {item.text}
+                    </span>
+                    {onOpen && (
+                      <button
+                        type="button"
+                        aria-label="항목 삭제"
+                        onPointerDown={stopBubble}
+                        onKeyDown={stopBubble}
+                        onClick={(e) => {
+                          stopBubble(e);
+                          deleteItem(item.id);
+                        }}
+                        className="shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/item:opacity-100 hover:text-destructive"
+                      >
+                        ✕
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>
