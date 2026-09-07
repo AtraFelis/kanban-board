@@ -4,6 +4,7 @@ use tauri::{
     AppHandle, Manager, WindowEvent,
 };
 use tauri_plugin_global_shortcut::ShortcutState;
+use tauri_plugin_window_state::StateFlags;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -31,6 +32,13 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         // 로컬 저장: 프론트엔드가 %APPDATA% 하위 JSON 파일에 보드 데이터를 읽고 쓴다.
         .plugin(tauri_plugin_store::Builder::new().build())
+        // 창 위치·크기를 재시작해도 기억한다. 표시 여부는 저장하지 않는다
+        // (풀보드는 항상 숨김으로 시작, 위젯은 항상 표시).
+        .plugin(
+            tauri_plugin_window_state::Builder::default()
+                .with_state_flags(StateFlags::POSITION | StateFlags::SIZE)
+                .build(),
+        )
         // 전역 단축키 Ctrl+Alt+K: 풀보드 창 토글
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
