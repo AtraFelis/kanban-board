@@ -32,7 +32,11 @@ export function CardDetailDialog({ cardId, onClose }: CardDetailDialogProps) {
         if (!next) onClose();
       }}
     >
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
+      <DialogContent
+        className="max-h-[90vh] overflow-y-auto"
+        // 실수로 바깥을 눌러 편집 중이던 내용을 잃지 않도록, 외부 클릭으로는 닫히지 않게 한다.
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>카드 편집</DialogTitle>
         </DialogHeader>
