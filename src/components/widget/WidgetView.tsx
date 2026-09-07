@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow, Window } from "@tauri-apps/api/window";
 
 import { CardContextMenu } from "@/components/board/CardContextMenu";
@@ -28,10 +29,13 @@ async function openFullBoard() {
   }
 }
 
-// 잠금 상태를 창에 반영: 잠그면 크기 조절 불가.
-async function applyLockToWindow(locked: boolean) {
+// "바탕화면에 고정" 상태를 창에 반영한다.
+// - 크기 조절 불가 (드래그 영역 제거는 렌더에서 처리)
+// - 항상 다른 창들 뒤로 (Rust set_widget_pinned가 z-order/NOACTIVATE 처리)
+async function applyPinToWindow(pinned: boolean) {
   try {
-    await getCurrentWindow().setResizable(!locked);
+    await getCurrentWindow().setResizable(!pinned);
+    await invoke("set_widget_pinned", { pinned });
   } catch {
     // Tauri 런타임이 아니면 무시
   }
@@ -56,7 +60,7 @@ export function WidgetView() {
   // 잠금 상태를 저장하고 창에 반영한다 (첫 마운트 포함).
   useEffect(() => {
     setWidgetLocked(locked);
-    void applyLockToWindow(locked);
+    void applyPinToWindow(locked);
   }, [locked]);
 
   function submitQuick(event: React.FormEvent) {
@@ -95,7 +99,7 @@ export function WidgetView() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onSelect={() => setLocked((v) => !v)}>
-                {locked ? "위치·크기 고정 해제" : "위치·크기 고정"}
+                {locked ? "바탕화면 고정 해제" : "바탕화면에 고정"}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

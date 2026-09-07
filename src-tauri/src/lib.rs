@@ -1,15 +1,58 @@
+use std::sync::atomic::{AtomicBool, Ordering};
+
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    AppHandle, Manager, WindowEvent,
+    AppHandle, Manager, WebviewWindow, WindowEvent,
 };
 use tauri_plugin_global_shortcut::ShortcutState;
 use tauri_plugin_window_state::StateFlags;
+
+// 위젯이 "바탕화면 고정"(항상 다른 창들 뒤) 상태인지. 포커스가 들어올 때
+// 다시 맨 뒤로 내리는 핸들러가 이 값을 참조한다.
+static WIDGET_PINNED: AtomicBool = AtomicBool::new(false);
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
+}
+
+// 위젯 창을 z-order 맨 뒤로 보내거나(pinned) 원상복구한다.
+// NOACTIVATE는 쓰지 않는다 — 위젯이 가려지지 않았을 땐 클릭해서 입력할 수 있어야 하므로.
+#[cfg(windows)]
+fn apply_desktop_pin(window: &WebviewWindow, pinned: bool) {
+    use windows::Win32::UI::WindowsAndMessaging::{
+        SetWindowPos, HWND_BOTTOM, HWND_TOP, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE,
+    };
+
+    let Ok(hwnd) = window.hwnd() else {
+        return;
+    };
+    let insert_after = if pinned { HWND_BOTTOM } else { HWND_TOP };
+    unsafe {
+        let _ = SetWindowPos(
+            hwnd,
+            Some(insert_after),
+            0,
+            0,
+            0,
+            0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+        );
+    }
+}
+
+#[cfg(not(windows))]
+fn apply_desktop_pin(_window: &WebviewWindow, _pinned: bool) {}
+
+// 프론트엔드(위젯 설정)에서 "바탕화면 고정" 토글 시 호출.
+#[tauri::command]
+fn set_widget_pinned(app: AppHandle, pinned: bool) {
+    WIDGET_PINNED.store(pinned, Ordering::SeqCst);
+    if let Some(window) = app.get_webview_window("widget") {
+        apply_desktop_pin(&window, pinned);
+    }
 }
 
 // label 창을 보이기/숨기기 토글한다.
@@ -63,6 +106,18 @@ pub fn run() {
                 });
             }
 
+            // 위젯이 어떤 이유로 포커스를 받으면(클릭 등) 고정 상태일 때 다시 맨 뒤로 내린다.
+            if let Some(widget_window) = app.get_webview_window("widget") {
+                let sink = widget_window.clone();
+                widget_window.on_window_event(move |event| {
+                    if let WindowEvent::Focused(true) = event {
+                        if WIDGET_PINNED.load(Ordering::SeqCst) {
+                            apply_desktop_pin(&sink, true);
+                        }
+                    }
+                });
+            }
+
             // 트레이 우클릭 메뉴: 풀보드 토글 / 위젯 토글 / 종료
             let board_item =
                 MenuItem::with_id(app, "toggle_main", "풀보드 표시/숨김", true, None::<&str>)?;
@@ -97,7 +152,7 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![greet])
+        .invoke_handler(tauri::generate_handler![greet, set_widget_pinned])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
