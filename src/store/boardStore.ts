@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 
 import { loadBoard, saveBoard } from "@/lib/boardStorage";
+import { createId } from "@/lib/id";
 import type { Board, Card, Column } from "@/types";
 
 // 카드 생성 시 넘길 수 있는 초기 필드. 빠른 추가는 title(+dueDate)만, 상세 추가는 전부 채운다.
@@ -16,10 +17,6 @@ const DEFAULT_COLUMN_TITLES = ["할 일", "진행 중", "완료"];
 const DEFAULT_BOARD_TITLE = "내 보드";
 // 변경이 잦을 때 디스크 쓰기를 묶기 위한 자동 저장 지연.
 const AUTOSAVE_DELAY_MS = 300;
-
-function createId(): string {
-  return crypto.randomUUID();
-}
 
 function createDefaultBoard(): Board {
   const columns: Column[] = DEFAULT_COLUMN_TITLES.map((title) => ({
@@ -60,10 +57,6 @@ interface BoardState {
   removeCard: (cardId: string) => void;
   // 카드를 toColumnId의 toIndex 위치로 옮긴다. 같은 컬럼 내 순서 변경도 이 함수로 처리.
   moveCard: (cardId: string, toColumnId: string, toIndex: number) => void;
-
-  addChecklistItem: (cardId: string, text: string) => void;
-  toggleChecklistItem: (cardId: string, itemId: string) => void;
-  removeChecklistItem: (cardId: string, itemId: string) => void;
 }
 
 export const useBoardStore = create<BoardState>()(
@@ -156,26 +149,6 @@ export const useBoardStore = create<BoardState>()(
 
         renumber(state.board, fromColumn.id);
         if (fromColumn.id !== toColumn.id) renumber(state.board, toColumn.id);
-      }),
-
-    addChecklistItem: (cardId, text) =>
-      set((state) => {
-        const card = state.board?.cards[cardId];
-        if (card) card.checklist.push({ id: createId(), text, done: false });
-      }),
-
-    toggleChecklistItem: (cardId, itemId) =>
-      set((state) => {
-        const item = state.board?.cards[cardId]?.checklist.find(
-          (i) => i.id === itemId,
-        );
-        if (item) item.done = !item.done;
-      }),
-
-    removeChecklistItem: (cardId, itemId) =>
-      set((state) => {
-        const card = state.board?.cards[cardId];
-        if (card) card.checklist = card.checklist.filter((i) => i.id !== itemId);
       }),
   })),
 );
