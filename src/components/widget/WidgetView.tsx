@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow, Window } from "@tauri-apps/api/window";
 
 import { BoardColumns } from "@/components/board/BoardColumns";
@@ -38,17 +39,23 @@ async function openFullBoard() {
   }
 }
 
-// "바탕화면에 고정" 상태를 창에 반영한다 (크기 조절 불가 + 항상 다른 창들 뒤).
-async function applyPinToWindow(pinned: boolean) {
+// "위치·크기 조정" 모드를 창에 반영한다.
+// 켜면: 항상 위 + 크기 조절 가능 + 바탕화면 고정 해제 (드래그로 이동 가능).
+// 끄면: 다시 바탕화면에 고정 (다른 창들 뒤, 크기 잠금).
+async function applyAdjustMode(on: boolean) {
   try {
-    await getCurrentWindow().setResizable(!pinned);
-    await invoke("set_widget_pinned", { pinned });
+    const win = getCurrentWindow();
+    await win.setResizable(on);
+    await win.setAlwaysOnTop(on);
+    await invoke("set_widget_pinned", { pinned: !on });
+    if (on) await win.setFocus();
   } catch {
     // Tauri 런타임이 아니면 무시
   }
 }
 
-// 바탕화면에 상주하는 작은 보드. 헤더 없이 보드만 보이고, 위젯 우클릭으로 설정.
+// 바탕화면에 상주하는 작은 보드. 헤더 없이 보드만 보이고, 우클릭으로 설정 메뉴.
+// 위치·크기 조정은 트레이 메뉴에서만 한다 (첫 실행 때만 자동으로 조정 모드).
 export function WidgetView() {
   const board = useBoardStore((s) => s.board);
   const isLoaded = useBoardStore((s) => s.isLoaded);
@@ -60,7 +67,8 @@ export function WidgetView() {
   const [autostart, setAutostartState] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settings, setSettings] = useState<WidgetSettings>(getWidgetSettings);
-  const { locked } = settings;
+  // 첫 실행(위치를 한 번도 안 잡음)이면 조정 모드로 시작해 사용자가 자리잡게 한다.
+  const [adjustMode, setAdjustMode] = useState(!settings.everPositioned);
 
   function updateSettings(patch: Partial<WidgetSettings>) {
     setSettings((prev) => {
@@ -75,10 +83,32 @@ export function WidgetView() {
     void getAutostart().then(setAutostartState);
   }, [init]);
 
-  // 잠금(바탕화면 고정) 상태를 창에 반영한다 (첫 마운트 포함).
+  // 트레이의 "위젯 위치/크기 조정" 메뉴가 이 이벤트를 보낸다. 누를 때마다 토글.
   useEffect(() => {
-    void applyPinToWindow(locked);
-  }, [locked]);
+    const unlisten = listen("widget:toggle-adjust", () => {
+      setAdjustMode((prev) => {
+        const next = !prev;
+        // 조정을 끝내는 순간 "위치를 잡았다"고 기록 → 다음 실행부터는 고정으로 시작.
+        if (!next) {
+          setSettings((s) => {
+            if (s.everPositioned) return s;
+            const updated = { ...s, everPositioned: true };
+            saveWidgetSettings(updated);
+            return updated;
+          });
+        }
+        return next;
+      });
+    });
+    return () => {
+      void unlisten.then((off) => off());
+    };
+  }, []);
+
+  // 조정 모드를 창 상태(크기 조절/항상 위/고정)에 반영한다. 첫 마운트 포함.
+  useEffect(() => {
+    void applyAdjustMode(adjustMode);
+  }, [adjustMode]);
 
   function toggleAutostart() {
     const next = !autostart;
@@ -97,9 +127,6 @@ export function WidgetView() {
     <>
       <ContextMenuItem onSelect={() => void openFullBoard()}>
         풀보드 열기
-      </ContextMenuItem>
-      <ContextMenuItem onSelect={() => updateSettings({ locked: !locked })}>
-        {locked ? "바탕화면 고정 해제" : "바탕화면에 고정"}
       </ContextMenuItem>
       <ContextMenuItem onSelect={toggleAutostart}>
         {autostart ? "✓ 시작 시 자동 실행" : "시작 시 자동 실행"}
@@ -126,8 +153,6 @@ export function WidgetView() {
       <ContextMenu modal={false}>
         <ContextMenuTrigger asChild>
           <div
-            // 잠기지 않았으면 빈 영역을 잡아 창을 옮길 수 있다 (컬럼/카드는 자식이라 제외).
-            {...(locked ? {} : { "data-tauri-drag-region": true })}
             className="relative flex h-screen flex-col rounded-xl border p-2 text-sm text-foreground shadow-lg select-none"
             style={rootStyle as React.CSSProperties}
           >
@@ -140,6 +165,19 @@ export function WidgetView() {
                 opacity: settings.opacity,
               }}
             />
+
+            {/* 조정 모드에서만 보이는 드래그 손잡이. 컬럼이 배경을 꽉 채워
+                따로 잡을 곳이 없으므로 전용 바를 둔다. */}
+            {adjustMode && (
+              <div
+                data-tauri-drag-region
+                className="mb-1 flex shrink-0 cursor-move items-center justify-center rounded-md bg-primary px-2 py-1 text-center text-xs font-medium text-primary-foreground"
+              >
+                <span data-tauri-drag-region>
+                  위치·크기 조정 중 — 드래그해서 이동, 트레이에서 다시 눌러 고정
+                </span>
+              </div>
+            )}
 
             {!isLoaded || !board ? (
               <p className="text-xs text-muted-foreground">불러오는 중…</p>
@@ -158,10 +196,7 @@ export function WidgetView() {
         <ContextMenuContent>{widgetMenuItems}</ContextMenuContent>
       </ContextMenu>
 
-      <CardDetailDialog
-        cardId={openCardId}
-        onClose={() => setOpenCardId(null)}
-      />
+      <CardDetailDialog cardId={openCardId} onClose={() => setOpenCardId(null)} />
       <CardCreateDialog
         columnId={createColumnId}
         onClose={() => setCreateColumnId(null)}

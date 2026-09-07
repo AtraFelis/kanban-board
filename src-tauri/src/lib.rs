@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    AppHandle, Manager, WebviewWindow, WindowEvent,
+    AppHandle, Emitter, Manager, WebviewWindow, WindowEvent,
 };
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_global_shortcut::ShortcutState;
@@ -89,6 +89,17 @@ fn import_board(app: AppHandle) -> Result<Option<String>, String> {
     Ok(Some(content))
 }
 
+// 트레이의 "위젯 위치/크기 조정"을 누르면 위젯을 보이고 프론트로 토글 이벤트를 보낸다.
+// 조정 모드 상태 자체는 위젯(프론트엔드)이 들고 있고, 여기서는 신호만 전달한다.
+fn toggle_widget_adjust(app: &AppHandle) {
+    let Some(window) = app.get_webview_window("widget") else {
+        return;
+    };
+    let _ = window.show();
+    let _ = window.set_focus();
+    let _ = window.emit("widget:toggle-adjust", ());
+}
+
 // label 창을 보이기/숨기기 토글한다.
 fn toggle_window(app: &AppHandle, label: &str) {
     let Some(window) = app.get_webview_window(label) else {
@@ -164,8 +175,18 @@ pub fn run() {
                 MenuItem::with_id(app, "toggle_main", "풀보드 표시/숨김", true, None::<&str>)?;
             let widget_item =
                 MenuItem::with_id(app, "toggle_widget", "위젯 표시/숨김", true, None::<&str>)?;
+            let adjust_item = MenuItem::with_id(
+                app,
+                "widget_adjust",
+                "위젯 위치/크기 조정",
+                true,
+                None::<&str>,
+            )?;
             let quit_item = MenuItem::with_id(app, "quit", "종료", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&board_item, &widget_item, &quit_item])?;
+            let menu = Menu::with_items(
+                app,
+                &[&board_item, &widget_item, &adjust_item, &quit_item],
+            )?;
 
             TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
@@ -176,6 +197,7 @@ pub fn run() {
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "toggle_main" => toggle_window(app, "main"),
                     "toggle_widget" => toggle_window(app, "widget"),
+                    "widget_adjust" => toggle_widget_adjust(app),
                     "quit" => app.exit(0),
                     _ => {}
                 })
