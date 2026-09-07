@@ -4,6 +4,7 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
+import { ask } from "@tauri-apps/plugin-dialog";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,12 +55,12 @@ export function ColumnView({
     setIsEditingTitle(false);
   }
 
-  function confirmDelete() {
-    if (
-      confirm(`"${column.title}" 컬럼을 삭제할까요? 카드도 함께 삭제됩니다.`)
-    ) {
-      removeColumn(column.id);
-    }
+  async function confirmDelete() {
+    const ok = await ask(
+      `"${column.title}" 컬럼을 삭제하면 이 컬럼의 카드도 모두 삭제됩니다.\n계속할까요?`,
+      { title: "컬럼 삭제", kind: "warning", okLabel: "삭제", cancelLabel: "취소" },
+    );
+    if (ok) removeColumn(column.id);
   }
 
   return (

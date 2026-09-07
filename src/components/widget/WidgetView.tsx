@@ -106,7 +106,7 @@ export function WidgetView() {
                 className="h-6 px-2 text-xs"
                 aria-label="위젯 설정"
               >
-                ⚙
+                ⋯
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">

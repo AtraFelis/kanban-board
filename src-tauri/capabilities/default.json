@@ -13,6 +13,7 @@
     "core:window:allow-set-resizable",
     "opener:default",
     "store:default",
-    "autostart:default"
+    "autostart:default",
+    "dialog:default"
   ]
 }
