@@ -20,6 +20,6 @@
 
 ## 주의사항
 - `.env`, API 키, 개인 설정(`.claude/settings.local.json`) 등은 커밋하지 않는다.
-  아직 `.gitignore`가 없으므로, Phase 0 스캐폴딩 시 함께 만든다.
+  루트 `.gitignore`에 관련 제외 규칙이 있으니, 새 빌드 산출물 디렉토리가 생기면 규칙을 보강한다.
 - 커밋 전 `git status`로 의도치 않은 파일(빌드 산출물 `dist/`, `src-tauri/target/`,
   `node_modules/` 등)이 포함되지 않았는지 확인한다.

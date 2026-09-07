@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 현재 상태
 
-스캐폴딩 이전 단계. [.claude/plan.md](.claude/plan.md)만 존재하며 git 저장소가 아니다. `package.json` / `src/` / `src-tauri/` 없음 → Phase 0을 끝내기 전까지 build·lint·test 명령이 없다. 작업 시작 전 [.claude/plan.md](.claude/plan.md)를 읽을 것 (확정 스택·구조·데이터 모델·Phase 게이트의 원본). 제품 배경은 별도 `기획서.md`(claude.ai 프로젝트)에 있고 이 저장소엔 없다.
+스캐폴딩 이전 단계. 저장소에 코드가 없고 [.claude/plan.md](.claude/plan.md)와 지침 문서만 있다. `package.json` / `src/` / `src-tauri/` 없음 → Phase 0을 끝내기 전까지 build·lint·test 명령이 없다. 작업 시작 전 [.claude/plan.md](.claude/plan.md)를 읽을 것 (확정 스택·구조·데이터 모델·Phase 게이트의 원본). 제품 배경은 별도 `기획서.md`(claude.ai 프로젝트)에 있고 이 저장소엔 없다.
 
 ## 만들려는 것
 
