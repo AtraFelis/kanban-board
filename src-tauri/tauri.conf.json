@@ -56,7 +56,10 @@
       "icons/icon.ico"
     ],
     "windows": {
-      "webviewInstallMode": { "type": "downloadBootstrapper" }
+      "webviewInstallMode": { "type": "downloadBootstrapper" },
+      "wix": {
+        "language": ["ko-KR"]
+      }
     }
   }
 }
