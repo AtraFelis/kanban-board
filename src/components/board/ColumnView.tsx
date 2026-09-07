@@ -1,18 +1,24 @@
 import { useState } from "react";
+import { useDroppable } from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useBoardStore } from "@/store/boardStore";
 import type { Card, Column } from "@/types";
 
+import { SortableCard } from "./SortableCard";
+
 interface ColumnViewProps {
   column: Column;
   cards: Card[];
-  renderCard: (card: Card) => React.ReactNode;
 }
 
-// 컬럼 한 개: 제목 편집, 카드 목록, 카드 추가, 컬럼 삭제.
-export function ColumnView({ column, cards, renderCard }: ColumnViewProps) {
+// 컬럼 한 개: 제목 편집, 카드 목록(드롭 대상), 카드 추가, 컬럼 삭제.
+export function ColumnView({ column, cards }: ColumnViewProps) {
   const renameColumn = useBoardStore((s) => s.renameColumn);
   const removeColumn = useBoardStore((s) => s.removeColumn);
   const addCard = useBoardStore((s) => s.addCard);
@@ -20,6 +26,12 @@ export function ColumnView({ column, cards, renderCard }: ColumnViewProps) {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(column.title);
   const [newCardTitle, setNewCardTitle] = useState("");
+
+  // 빈 컬럼에도 카드를 떨어뜨릴 수 있도록 컬럼 자체를 드롭 대상으로 등록.
+  const { setNodeRef, isOver } = useDroppable({
+    id: column.id,
+    data: { type: "column" },
+  });
 
   function commitTitle() {
     const trimmed = titleDraft.trim();
@@ -79,7 +91,11 @@ export function ColumnView({ column, cards, renderCard }: ColumnViewProps) {
           className="size-7"
           aria-label="컬럼 삭제"
           onClick={() => {
-            if (confirm(`"${column.title}" 컬럼을 삭제할까요? 카드도 함께 삭제됩니다.`)) {
+            if (
+              confirm(
+                `"${column.title}" 컬럼을 삭제할까요? 카드도 함께 삭제됩니다.`,
+              )
+            ) {
               removeColumn(column.id);
             }
           }}
@@ -88,10 +104,20 @@ export function ColumnView({ column, cards, renderCard }: ColumnViewProps) {
         </Button>
       </div>
 
-      <div className="flex flex-1 flex-col gap-2 overflow-y-auto">
-        {cards.map((card) => (
-          <div key={card.id}>{renderCard(card)}</div>
-        ))}
+      <div
+        ref={setNodeRef}
+        className={`flex flex-1 flex-col gap-2 overflow-y-auto rounded-md p-0.5 transition-colors ${
+          isOver ? "bg-accent/60" : ""
+        }`}
+      >
+        <SortableContext
+          items={column.cardIds}
+          strategy={verticalListSortingStrategy}
+        >
+          {cards.map((card) => (
+            <SortableCard key={card.id} card={card} />
+          ))}
+        </SortableContext>
       </div>
 
       <form onSubmit={submitNewCard} className="flex gap-1">
