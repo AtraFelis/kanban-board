@@ -1,27 +1,14 @@
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    AppHandle, LogicalSize, Manager, WindowEvent,
+    AppHandle, Manager, WindowEvent,
 };
 use tauri_plugin_global_shortcut::ShortcutState;
-
-// 창이 이 높이 아래로는 줄지 않도록 하는 최소 높이.
-// 카드 추가/편집 팝업(기본 폼)이 내부 스크롤 없이 다 보이는 높이 기준.
-const MIN_WINDOW_HEIGHT: f64 = 780.0;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
-}
-
-// 프론트엔드가 컬럼 수에 맞춰 계산한 폭 아래로는 창이 줄지 않게 한다.
-// (모든 컬럼이 최소 너비로 보이는 지점이 곧 창의 최소 폭)
-#[tauri::command]
-fn set_min_board_width(app: AppHandle, width: f64) {
-    if let Some(window) = app.get_webview_window("main") {
-        let _ = window.set_min_size(Some(LogicalSize::new(width, MIN_WINDOW_HEIGHT)));
-    }
 }
 
 // label 창을 보이기/숨기기 토글한다.
@@ -102,7 +89,7 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![greet, set_min_board_width])
+        .invoke_handler(tauri::generate_handler![greet])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

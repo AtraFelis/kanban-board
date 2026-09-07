@@ -28,7 +28,7 @@ export function ColumnContextMenu({
       <ContextMenuTrigger asChild>
         <div
           onDoubleClick={onDoubleClick}
-          className="flex h-full min-w-[260px] flex-1 flex-col gap-2 rounded-lg bg-muted/50 p-2"
+          className="flex min-w-0 flex-col gap-2 rounded-lg bg-muted/50 p-2"
         >
           {children}
         </div>

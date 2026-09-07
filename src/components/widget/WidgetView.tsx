@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { COLUMN_GRID_STYLE } from "@/lib/columnGrid";
 import { todayISODate } from "@/lib/date";
 import { getWidgetLocked, setWidgetLocked } from "@/lib/widgetSettings";
 import { useBoardStore } from "@/store/boardStore";
@@ -114,10 +115,8 @@ export function WidgetView() {
         <p className="text-xs text-muted-foreground">불러오는 중…</p>
       ) : (
         <div
-          className="grid min-h-0 flex-1 gap-2 overflow-x-auto overflow-y-auto"
-          style={{
-            gridTemplateColumns: `repeat(${Math.max(board.columns.length, 1)}, minmax(150px, 1fr))`,
-          }}
+          className="grid min-h-0 flex-1 auto-rows-min gap-2 overflow-y-auto"
+          style={COLUMN_GRID_STYLE}
         >
           {board.columns.map((column) => (
             <WidgetColumn
