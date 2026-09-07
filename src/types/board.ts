@@ -29,8 +29,10 @@ export interface Column {
 }
 
 // 보드 한 개. 1차 버전은 단일 보드만 사용한다.
+// 카드 실체는 cards 맵에 id로 저장하고, 컬럼은 cardIds로 참조만 한다.
 export interface Board {
   id: string;
   title: string;
   columns: Column[];
+  cards: Record<string, Card>;
 }
