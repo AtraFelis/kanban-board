@@ -4,6 +4,7 @@ import { CSS } from "@dnd-kit/utilities";
 
 import type { Card } from "@/types";
 
+import { CardContextMenu } from "./CardContextMenu";
 import { CardView } from "./CardView";
 
 interface SortableCardProps {
@@ -41,7 +42,9 @@ export function SortableCard({ card, onOpen }: SortableCardProps) {
       {...attributes}
       {...listeners}
     >
-      <CardView card={card} onOpen={handleOpen} />
+      <CardContextMenu card={card} onOpen={onOpen}>
+        <CardView card={card} onOpen={handleOpen} />
+      </CardContextMenu>
     </div>
   );
 }

@@ -13,11 +13,12 @@ import {
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { syncMinBoardWidth } from "@/lib/window";
 import { useBoardStore } from "@/store/boardStore";
 import type { Board, Card } from "@/types";
 
+import { BoardHeader } from "./BoardHeader";
+import { CardCreateDialog } from "./CardCreateDialog";
 import { CardDetailDialog } from "./CardDetailDialog";
 import { CardView } from "./CardView";
 import { ColumnView } from "./ColumnView";
@@ -49,12 +50,11 @@ export function BoardView() {
   const board = useBoardStore((s) => s.board);
   const isLoaded = useBoardStore((s) => s.isLoaded);
   const init = useBoardStore((s) => s.init);
-  const addColumn = useBoardStore((s) => s.addColumn);
   const moveCard = useBoardStore((s) => s.moveCard);
 
-  const [newColumnTitle, setNewColumnTitle] = useState("");
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
   const [openCardId, setOpenCardId] = useState<string | null>(null);
+  const [createColumnId, setCreateColumnId] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -67,6 +67,12 @@ export function BoardView() {
     void init();
   }, [init]);
 
+  // 컬럼 수가 바뀌면 창 최소 너비를 다시 맞춘다.
+  const columnCount = board?.columns.length ?? 0;
+  useEffect(() => {
+    if (columnCount > 0) syncMinBoardWidth(columnCount);
+  }, [columnCount]);
+
   const activeCard = useMemo<Card | null>(
     () => (activeCardId && board ? (board.cards[activeCardId] ?? null) : null),
     [activeCardId, board],
@@ -78,14 +84,6 @@ export function BoardView() {
         불러오는 중…
       </div>
     );
-  }
-
-  function submitNewColumn(event: React.FormEvent) {
-    event.preventDefault();
-    const trimmed = newColumnTitle.trim();
-    if (!trimmed) return;
-    addColumn(trimmed);
-    setNewColumnTitle("");
   }
 
   function handleDragStart(event: DragStartEvent) {
@@ -132,7 +130,7 @@ export function BoardView() {
 
   return (
     <div className="flex h-screen flex-col gap-3 p-3">
-      <h1 className="text-lg font-semibold">{board.title}</h1>
+      <BoardHeader title={board.title} />
 
       <DndContext
         sensors={sensors}
@@ -142,7 +140,8 @@ export function BoardView() {
         onDragEnd={handleDragEnd}
         onDragCancel={() => setActiveCardId(null)}
       >
-        <div className="flex flex-1 items-start gap-3 overflow-x-auto pb-2">
+        {/* 컬럼은 남은 너비를 나눠 갖고(flex-1), 최소 너비 아래로만 가로 스크롤 */}
+        <div className="flex flex-1 items-stretch gap-3 overflow-x-auto pb-2">
           {board.columns.map((column) => {
             const cards = column.cardIds
               .map((id) => board.cards[id])
@@ -153,24 +152,10 @@ export function BoardView() {
                 column={column}
                 cards={cards}
                 onOpenCard={setOpenCardId}
+                onOpenCreate={setCreateColumnId}
               />
             );
           })}
-
-          <form
-            onSubmit={submitNewColumn}
-            className="flex w-72 shrink-0 gap-1 rounded-lg border border-dashed p-2"
-          >
-            <Input
-              value={newColumnTitle}
-              onChange={(e) => setNewColumnTitle(e.target.value)}
-              placeholder="+ 컬럼 추가"
-              className="h-8"
-            />
-            <Button type="submit" size="sm" disabled={!newColumnTitle.trim()}>
-              추가
-            </Button>
-          </form>
         </div>
 
         <DragOverlay>
@@ -181,6 +166,10 @@ export function BoardView() {
       <CardDetailDialog
         cardId={openCardId}
         onClose={() => setOpenCardId(null)}
+      />
+      <CardCreateDialog
+        columnId={createColumnId}
+        onClose={() => setCreateColumnId(null)}
       />
     </div>
   );

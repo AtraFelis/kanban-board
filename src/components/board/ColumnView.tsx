@@ -10,29 +10,39 @@ import { Input } from "@/components/ui/input";
 import { useBoardStore } from "@/store/boardStore";
 import type { Card, Column } from "@/types";
 
+import { ColumnContextMenu } from "./ColumnContextMenu";
 import { SortableCard } from "./SortableCard";
 
 interface ColumnViewProps {
   column: Column;
   cards: Card[];
   onOpenCard: (cardId: string) => void;
+  onOpenCreate: (columnId: string) => void;
 }
 
-// 컬럼 한 개: 제목 편집, 카드 목록(드롭 대상), 카드 추가, 컬럼 삭제.
-export function ColumnView({ column, cards, onOpenCard }: ColumnViewProps) {
+// 컬럼 한 개: 제목 편집, 카드 목록(드롭 대상), 우클릭·더블클릭으로 카드 추가, 컬럼 삭제.
+export function ColumnView({
+  column,
+  cards,
+  onOpenCard,
+  onOpenCreate,
+}: ColumnViewProps) {
   const renameColumn = useBoardStore((s) => s.renameColumn);
   const removeColumn = useBoardStore((s) => s.removeColumn);
-  const addCard = useBoardStore((s) => s.addCard);
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(column.title);
-  const [newCardTitle, setNewCardTitle] = useState("");
 
   // 빈 컬럼에도 카드를 떨어뜨릴 수 있도록 컬럼 자체를 드롭 대상으로 등록.
   const { setNodeRef, isOver } = useDroppable({
     id: column.id,
     data: { type: "column" },
   });
+
+  function startRename() {
+    setTitleDraft(column.title);
+    setIsEditingTitle(true);
+  }
 
   function commitTitle() {
     const trimmed = titleDraft.trim();
@@ -44,16 +54,24 @@ export function ColumnView({ column, cards, onOpenCard }: ColumnViewProps) {
     setIsEditingTitle(false);
   }
 
-  function submitNewCard(event: React.FormEvent) {
-    event.preventDefault();
-    const trimmed = newCardTitle.trim();
-    if (!trimmed) return;
-    addCard(column.id, trimmed);
-    setNewCardTitle("");
+  function confirmDelete() {
+    if (
+      confirm(`"${column.title}" 컬럼을 삭제할까요? 카드도 함께 삭제됩니다.`)
+    ) {
+      removeColumn(column.id);
+    }
   }
 
   return (
-    <div className="flex h-full w-72 shrink-0 flex-col gap-2 rounded-lg bg-muted/50 p-2">
+    <ColumnContextMenu
+      onAddCard={() => onOpenCreate(column.id)}
+      onRename={startRename}
+      onDelete={confirmDelete}
+      // 카드가 아닌 빈 영역을 더블클릭했을 때만 카드 추가.
+      onDoubleClick={(e) => {
+        if (e.target === e.currentTarget) onOpenCreate(column.id);
+      }}
+    >
       <div className="flex items-center gap-1">
         {isEditingTitle ? (
           <Input
@@ -74,10 +92,7 @@ export function ColumnView({ column, cards, onOpenCard }: ColumnViewProps) {
           <button
             type="button"
             className="flex-1 rounded px-1 py-0.5 text-left text-sm font-semibold hover:bg-accent"
-            onClick={() => {
-              setTitleDraft(column.title);
-              setIsEditingTitle(true);
-            }}
+            onClick={startRename}
           >
             {column.title}
             <span className="ml-1 text-xs font-normal text-muted-foreground">
@@ -91,15 +106,7 @@ export function ColumnView({ column, cards, onOpenCard }: ColumnViewProps) {
           size="icon"
           className="size-7"
           aria-label="컬럼 삭제"
-          onClick={() => {
-            if (
-              confirm(
-                `"${column.title}" 컬럼을 삭제할까요? 카드도 함께 삭제됩니다.`,
-              )
-            ) {
-              removeColumn(column.id);
-            }
-          }}
+          onClick={confirmDelete}
         >
           ✕
         </Button>
@@ -107,6 +114,9 @@ export function ColumnView({ column, cards, onOpenCard }: ColumnViewProps) {
 
       <div
         ref={setNodeRef}
+        onDoubleClick={(e) => {
+          if (e.target === e.currentTarget) onOpenCreate(column.id);
+        }}
         className={`flex flex-1 flex-col gap-2 overflow-y-auto rounded-md p-0.5 transition-colors ${
           isOver ? "bg-accent/60" : ""
         }`}
@@ -119,19 +129,13 @@ export function ColumnView({ column, cards, onOpenCard }: ColumnViewProps) {
             <SortableCard key={card.id} card={card} onOpen={onOpenCard} />
           ))}
         </SortableContext>
-      </div>
 
-      <form onSubmit={submitNewCard} className="flex gap-1">
-        <Input
-          value={newCardTitle}
-          onChange={(e) => setNewCardTitle(e.target.value)}
-          placeholder="+ 카드 추가"
-          className="h-8"
-        />
-        <Button type="submit" size="sm" disabled={!newCardTitle.trim()}>
-          추가
-        </Button>
-      </form>
-    </div>
+        {cards.length === 0 && (
+          <p className="pointer-events-none px-1 pt-1 text-xs text-muted-foreground">
+            더블클릭하거나 우클릭해서 카드를 추가하세요.
+          </p>
+        )}
+      </div>
+    </ColumnContextMenu>
   );
 }
