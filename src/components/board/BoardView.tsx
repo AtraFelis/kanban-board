@@ -13,11 +13,10 @@ import {
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useBoardStore } from "@/store/boardStore";
 import type { Board, Card } from "@/types";
 
+import { BoardHeader } from "./BoardHeader";
 import { CardDetailDialog } from "./CardDetailDialog";
 import { CardView } from "./CardView";
 import { ColumnView } from "./ColumnView";
@@ -49,10 +48,8 @@ export function BoardView() {
   const board = useBoardStore((s) => s.board);
   const isLoaded = useBoardStore((s) => s.isLoaded);
   const init = useBoardStore((s) => s.init);
-  const addColumn = useBoardStore((s) => s.addColumn);
   const moveCard = useBoardStore((s) => s.moveCard);
 
-  const [newColumnTitle, setNewColumnTitle] = useState("");
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
   const [openCardId, setOpenCardId] = useState<string | null>(null);
 
@@ -78,14 +75,6 @@ export function BoardView() {
         불러오는 중…
       </div>
     );
-  }
-
-  function submitNewColumn(event: React.FormEvent) {
-    event.preventDefault();
-    const trimmed = newColumnTitle.trim();
-    if (!trimmed) return;
-    addColumn(trimmed);
-    setNewColumnTitle("");
   }
 
   function handleDragStart(event: DragStartEvent) {
@@ -132,7 +121,7 @@ export function BoardView() {
 
   return (
     <div className="flex h-screen flex-col gap-3 p-3">
-      <h1 className="text-lg font-semibold">{board.title}</h1>
+      <BoardHeader title={board.title} />
 
       <DndContext
         sensors={sensors}
@@ -157,21 +146,6 @@ export function BoardView() {
               />
             );
           })}
-
-          <form
-            onSubmit={submitNewColumn}
-            className="flex w-72 shrink-0 gap-1 rounded-lg border border-dashed p-2"
-          >
-            <Input
-              value={newColumnTitle}
-              onChange={(e) => setNewColumnTitle(e.target.value)}
-              placeholder="+ 컬럼 추가"
-              className="h-8"
-            />
-            <Button type="submit" size="sm" disabled={!newColumnTitle.trim()}>
-              추가
-            </Button>
-          </form>
         </div>
 
         <DragOverlay>
