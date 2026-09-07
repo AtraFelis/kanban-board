@@ -42,13 +42,24 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["msi"],
+    "publisher": "AtraFelis",
+    "copyright": "© 2026 AtraFelis",
+    "category": "Productivity",
+    "shortDescription": "개인용 칸반보드 위젯",
+    "longDescription": "Windows 상시 실행 개인용 칸반보드. 바탕화면 위젯 모드와 풀보드 모드로 같은 데이터를 본다. 로컬 저장 전용.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "windows": {
+      "webviewInstallMode": { "type": "downloadBootstrapper" },
+      "wix": {
+        "language": ["ko-KR"]
+      }
+    }
   }
 }
