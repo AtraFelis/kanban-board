@@ -1,6 +1,5 @@
 import { useState } from "react";
 
-import { Button } from "@/components/ui/button";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -11,14 +10,10 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { useBoardStore } from "@/store/boardStore";
 import type { Card } from "@/types";
+
+import { DeleteCardDialog } from "./DeleteCardDialog";
 
 interface CardContextMenuProps {
   card: Card;
@@ -30,7 +25,6 @@ interface CardContextMenuProps {
 export function CardContextMenu({ card, onOpen, children }: CardContextMenuProps) {
   const columns = useBoardStore((s) => s.board?.columns);
   const moveCard = useBoardStore((s) => s.moveCard);
-  const removeCard = useBoardStore((s) => s.removeCard);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const currentColumnId = columns?.find((c) =>
@@ -77,37 +71,11 @@ export function CardContextMenu({ card, onOpen, children }: CardContextMenuProps
         </ContextMenuContent>
       </ContextMenu>
 
-      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <DialogContent className="max-w-xs">
-          <DialogHeader>
-            <DialogTitle>정말 삭제할까요?</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm break-words text-muted-foreground">
-            &ldquo;{card.title}&rdquo; 카드가 삭제됩니다.
-          </p>
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setConfirmOpen(false)}
-            >
-              취소
-            </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              size="sm"
-              onClick={() => {
-                removeCard(card.id);
-                setConfirmOpen(false);
-              }}
-            >
-              확인
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <DeleteCardDialog
+        card={card}
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+      />
     </>
   );
 }
