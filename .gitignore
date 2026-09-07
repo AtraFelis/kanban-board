@@ -1,0 +1,25 @@
+# Node
+node_modules/
+dist/
+dist-ssr/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Rust / Tauri 빌드 산출물
+src-tauri/target/
+
+# Claude Code 개인 설정
+.claude/settings.local.json
+CLAUDE.local.md
+
+# 환경 변수 / 비밀값
+.env
+.env.local
+
+# 에디터 / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
