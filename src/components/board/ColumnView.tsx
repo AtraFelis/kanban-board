@@ -15,10 +15,11 @@ import { SortableCard } from "./SortableCard";
 interface ColumnViewProps {
   column: Column;
   cards: Card[];
+  onOpenCard: (cardId: string) => void;
 }
 
 // 컬럼 한 개: 제목 편집, 카드 목록(드롭 대상), 카드 추가, 컬럼 삭제.
-export function ColumnView({ column, cards }: ColumnViewProps) {
+export function ColumnView({ column, cards, onOpenCard }: ColumnViewProps) {
   const renameColumn = useBoardStore((s) => s.renameColumn);
   const removeColumn = useBoardStore((s) => s.removeColumn);
   const addCard = useBoardStore((s) => s.addCard);
@@ -115,7 +116,7 @@ export function ColumnView({ column, cards }: ColumnViewProps) {
           strategy={verticalListSortingStrategy}
         >
           {cards.map((card) => (
-            <SortableCard key={card.id} card={card} />
+            <SortableCard key={card.id} card={card} onOpen={onOpenCard} />
           ))}
         </SortableContext>
       </div>

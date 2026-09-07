@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { useBoardStore } from "@/store/boardStore";
 import type { Board, Card } from "@/types";
 
+import { CardDetailDialog } from "./CardDetailDialog";
 import { CardView } from "./CardView";
 import { ColumnView } from "./ColumnView";
 
@@ -53,6 +54,7 @@ export function BoardView() {
 
   const [newColumnTitle, setNewColumnTitle] = useState("");
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
+  const [openCardId, setOpenCardId] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -145,7 +147,14 @@ export function BoardView() {
             const cards = column.cardIds
               .map((id) => board.cards[id])
               .filter((card): card is Card => Boolean(card));
-            return <ColumnView key={column.id} column={column} cards={cards} />;
+            return (
+              <ColumnView
+                key={column.id}
+                column={column}
+                cards={cards}
+                onOpenCard={setOpenCardId}
+              />
+            );
           })}
 
           <form
@@ -168,6 +177,11 @@ export function BoardView() {
           {activeCard ? <CardView card={activeCard} /> : null}
         </DragOverlay>
       </DndContext>
+
+      <CardDetailDialog
+        cardId={openCardId}
+        onClose={() => setOpenCardId(null)}
+      />
     </div>
   );
 }
