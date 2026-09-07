@@ -1,8 +1,9 @@
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    AppHandle, LogicalSize, Manager,
+    AppHandle, LogicalSize, Manager, WindowEvent,
 };
+use tauri_plugin_global_shortcut::ShortcutState;
 
 // 창이 이 높이 아래로는 줄지 않도록 하는 최소 높이.
 // 카드 추가/편집 팝업(기본 폼)이 내부 스크롤 없이 다 보이는 높이 기준.
@@ -43,7 +44,30 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         // 로컬 저장: 프론트엔드가 %APPDATA% 하위 JSON 파일에 보드 데이터를 읽고 쓴다.
         .plugin(tauri_plugin_store::Builder::new().build())
+        // 전역 단축키 Ctrl+Alt+K: 풀보드 창 토글
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_shortcut("ctrl+alt+k")
+                .expect("잘못된 단축키")
+                .with_handler(|app, _shortcut, event| {
+                    if event.state() == ShortcutState::Pressed {
+                        toggle_window(app, "main");
+                    }
+                })
+                .build(),
+        )
         .setup(|app| {
+            // 풀보드 창의 X 버튼은 종료가 아니라 숨김 (상시 실행, 트레이로 복귀)
+            if let Some(main_window) = app.get_webview_window("main") {
+                let hidden = main_window.clone();
+                main_window.on_window_event(move |event| {
+                    if let WindowEvent::CloseRequested { api, .. } = event {
+                        api.prevent_close();
+                        let _ = hidden.hide();
+                    }
+                });
+            }
+
             // 트레이 우클릭 메뉴: 풀보드 토글 / 위젯 토글 / 종료
             let board_item =
                 MenuItem::with_id(app, "toggle_main", "풀보드 표시/숨김", true, None::<&str>)?;

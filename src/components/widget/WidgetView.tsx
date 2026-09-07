@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Window } from "@tauri-apps/api/window";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +8,17 @@ import { useBoardStore } from "@/store/boardStore";
 import type { Card } from "@/types";
 
 const RECENT_COUNT = 5;
+
+// 풀보드 창을 띄운다 (숨겨져 있으면 표시 + 포커스).
+async function openFullBoard() {
+  try {
+    const main = await Window.getByLabel("main");
+    await main?.show();
+    await main?.setFocus();
+  } catch {
+    // Tauri 런타임이 아니면 무시
+  }
+}
 
 // 바탕화면에 상주하는 작은 요약 창. 마감 임박/지난 카드 + 최근 카드 + 빠른 추가.
 export function WidgetView() {
@@ -62,6 +74,15 @@ export function WidgetView() {
     <div className="flex h-screen flex-col gap-2 rounded-xl border bg-background/90 p-3 text-sm shadow-lg backdrop-blur">
       <div className="flex items-center justify-between">
         <span className="font-semibold">칸반보드</span>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className="h-6 px-2 text-xs"
+          onClick={openFullBoard}
+        >
+          풀보드
+        </Button>
       </div>
 
       {!isLoaded || !board ? (

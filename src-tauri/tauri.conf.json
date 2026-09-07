@@ -17,7 +17,8 @@
         "width": 960,
         "height": 820,
         "minWidth": 480,
-        "minHeight": 780
+        "minHeight": 780,
+        "visible": false
       },
       {
         "label": "widget",
@@ -30,7 +31,7 @@
         "resizable": false,
         "skipTaskbar": true,
         "shadow": false,
-        "visible": false
+        "visible": true
       }
     ],
     "security": {
