@@ -28,6 +28,8 @@ fn toggle_main_window(app: &AppHandle) {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        // 로컬 저장: 프론트엔드가 %APPDATA% 하위 JSON 파일에 보드 데이터를 읽고 쓴다.
+        .plugin(tauri_plugin_store::Builder::new().build())
         .setup(|app| {
             // 트레이 우클릭 메뉴: 창 토글 / 종료
             let toggle_item =
