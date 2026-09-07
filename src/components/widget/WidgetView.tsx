@@ -15,7 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { exportBoardToFile, importBoardFromFile } from "@/lib/boardIO";
 import { COLUMN_GRID_STYLE } from "@/lib/columnGrid";
-import { todayISODate } from "@/lib/date";
+import { dueColorClass, dueStatus } from "@/lib/date";
 import { getWidgetLocked, setWidgetLocked } from "@/lib/widgetSettings";
 import { useBoardStore } from "@/store/boardStore";
 import type { Board, Column } from "@/types";
@@ -178,7 +178,6 @@ function WidgetColumn({
   board: Board;
   onOpenCard: (cardId: string) => void;
 }) {
-  const today = todayISODate();
   const cards = column.cardIds
     .map((id) => board.cards[id])
     .filter((card): card is NonNullable<typeof card> => Boolean(card));
@@ -196,18 +195,23 @@ function WidgetColumn({
             Boolean(card.dueDate) ||
             card.checklist.length > 0 ||
             card.labels.length > 0;
+          const due = dueStatus(card.dueDate);
           return (
             <CardContextMenu key={card.id} card={card} onOpen={onOpenCard}>
-              <div className="rounded border bg-card px-1.5 py-1">
+              <div
+                className={`rounded border bg-card px-1.5 py-1 ${
+                  due === "overdue"
+                    ? "border-l-2 border-l-destructive"
+                    : due === "soon"
+                      ? "border-l-2 border-l-amber-500"
+                      : ""
+                }`}
+              >
                 <p className="truncate text-xs font-medium">{card.title}</p>
                 {hasMeta && (
                   <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[10px] text-muted-foreground">
                     {card.dueDate && (
-                      <span
-                        className={
-                          card.dueDate <= today ? "text-destructive" : undefined
-                        }
-                      >
+                      <span className={dueColorClass(due)}>
                         📅 {card.dueDate}
                       </span>
                     )}
