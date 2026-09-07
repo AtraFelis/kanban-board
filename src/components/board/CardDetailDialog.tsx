@@ -32,12 +32,12 @@ export function CardDetailDialog({ cardId, onClose }: CardDetailDialogProps) {
         if (!next) onClose();
       }}
     >
+      {/* 헤더·푸터 고정, 가운데만 스크롤 → 체크리스트가 길어져도 저장/취소가 안 밀린다 */}
       <DialogContent
-        className="max-h-[90vh] overflow-y-auto"
-        // 실수로 바깥을 눌러 편집 중이던 내용을 잃지 않도록, 외부 클릭으로는 닫히지 않게 한다.
+        className="flex max-h-[85vh] w-full max-w-lg flex-col gap-0 overflow-hidden p-0"
         onInteractOutside={(e) => e.preventDefault()}
       >
-        <DialogHeader>
+        <DialogHeader className="shrink-0 border-b px-5 py-3.5 text-left">
           <DialogTitle>카드 편집</DialogTitle>
         </DialogHeader>
         {card && <CardEditForm key={card.id} card={card} onClose={onClose} />}
@@ -60,12 +60,14 @@ function CardEditForm({ card, onClose }: { card: Card; onClose: () => void }) {
 
   return (
     <>
-      <CardFields
-        value={draft}
-        onChange={(patch) => setDraft((prev) => ({ ...prev, ...patch }))}
-      />
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+        <CardFields
+          value={draft}
+          onChange={(patch) => setDraft((prev) => ({ ...prev, ...patch }))}
+        />
+      </div>
 
-      <div className="flex justify-between pt-2">
+      <div className="flex shrink-0 items-center justify-between gap-2 border-t px-5 py-3">
         <Button
           type="button"
           variant="destructive"

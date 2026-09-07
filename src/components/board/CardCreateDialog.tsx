@@ -27,12 +27,12 @@ export function CardCreateDialog({ columnId, onClose }: CardCreateDialogProps) {
         if (!next) onClose();
       }}
     >
+      {/* 헤더·푸터 고정, 가운데만 스크롤 → 내용이 길어져도 추가/취소가 안 밀린다 */}
       <DialogContent
-        className="max-h-[90vh] overflow-y-auto"
-        // 실수로 바깥을 눌러 입력 중이던 내용을 잃지 않도록, 외부 클릭으로는 닫히지 않게 한다.
+        className="flex max-h-[85vh] w-full max-w-lg flex-col gap-0 overflow-hidden p-0"
         onInteractOutside={(e) => e.preventDefault()}
       >
-        <DialogHeader>
+        <DialogHeader className="shrink-0 border-b px-5 py-3.5 text-left">
           <DialogTitle>카드 추가</DialogTitle>
         </DialogHeader>
         {columnId && (
@@ -61,11 +61,14 @@ function CardCreateForm({
 
   return (
     <>
-      <CardFields
-        value={draft}
-        onChange={(patch) => setDraft((prev) => ({ ...prev, ...patch }))}
-      />
-      <div className="flex justify-end gap-2 pt-2">
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+        <CardFields
+          value={draft}
+          onChange={(patch) => setDraft((prev) => ({ ...prev, ...patch }))}
+        />
+      </div>
+
+      <div className="flex shrink-0 justify-end gap-2 border-t px-5 py-3">
         <Button type="button" variant="ghost" size="sm" onClick={onClose}>
           취소
         </Button>

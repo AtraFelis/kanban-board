@@ -51,7 +51,9 @@ export function CardFields({ value, onChange }: CardFieldsProps) {
         <Textarea
           value={value.description}
           onChange={(e) => onChange({ description: e.target.value })}
-          rows={3}
+          placeholder="설명을 입력하세요"
+          // field-sizing-content: 내용에 맞춰 높이 자동 확장 (구형 3줄 고정 + 스크롤 제거)
+          className="field-sizing-content max-h-60 min-h-20 resize-none leading-relaxed"
         />
       </label>
 
@@ -126,9 +128,12 @@ export function CardFields({ value, onChange }: CardFieldsProps) {
             {doneCount}/{value.checklist.length}
           </span>
         </span>
-        <ul className="grid gap-1">
+        <ul className="grid gap-0.5">
           {value.checklist.map((item) => (
-            <li key={item.id} className="flex items-center gap-2">
+            <li
+              key={item.id}
+              className="group/row flex items-center gap-2 rounded px-1 py-0.5 hover:bg-accent"
+            >
               <input
                 type="checkbox"
                 checked={item.done}
@@ -139,6 +144,7 @@ export function CardFields({ value, onChange }: CardFieldsProps) {
                     ),
                   })
                 }
+                className="size-3.5 shrink-0"
               />
               <span
                 className={
@@ -151,14 +157,15 @@ export function CardFields({ value, onChange }: CardFieldsProps) {
               </span>
               <button
                 type="button"
+                aria-label="항목 삭제"
                 onClick={() =>
                   onChange({
                     checklist: value.checklist.filter((i) => i.id !== item.id),
                   })
                 }
-                className="text-xs text-muted-foreground hover:text-foreground"
+                className="shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/row:opacity-100 hover:text-destructive"
               >
-                삭제
+                ✕
               </button>
             </li>
           ))}
