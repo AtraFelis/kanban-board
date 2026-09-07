@@ -55,6 +55,12 @@ Phase 3 게이트(재부팅 후 위젯 자동 실행 + 데이터 보존)도 여�
 
 - autostart는 **설치된 exe 경로**를 등록한다. `npm run tauri dev`/`npm run dev`로는
   의미 있는 재부팅 테스트 불가 — 반드시 `.msi` 설치본으로.
+  - 겪은 사고: dev 세션에서 자동 실행을 켠 적이 있어 Run 키가
+    `...\target\debug\kanban-board.exe`(dev URL 로드 + 콘솔 창)를 가리키고 있었고,
+    재부팅 시 그게 떠서 `ERR_CONNECTION_REFUSED`. 레지스트리
+    `HKCU\...\Run\칸반보드`를 설치 경로로 고치고, `src/lib/autostart.ts`에
+    dev 모드 가드를 추가함(`import.meta.env.DEV`이면 no-op).
+  - 설치 위치: `C:\Program Files\칸반보드\kanban-board.exe`.
 - 위젯은 `transparent: true` + `decorations: false`. 일부 환경에서 투명/그림자
   렌더가 드라이버 영향을 받을 수 있으니 설치 PC에서 육안 확인.
 - 코드 서명 없음 → 최초 실행 시 SmartScreen 경고 가능. 개인용이므로 "추가 정보 →
