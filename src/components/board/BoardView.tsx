@@ -142,7 +142,8 @@ export function BoardView() {
         onDragEnd={handleDragEnd}
         onDragCancel={() => setActiveCardId(null)}
       >
-        <div className="flex flex-1 items-start gap-3 overflow-x-auto pb-2">
+        {/* 컬럼은 남은 너비를 나눠 갖고(flex-1), 최소 너비 아래로만 가로 스크롤 */}
+        <div className="flex flex-1 items-stretch gap-3 overflow-x-auto pb-2">
           {board.columns.map((column) => {
             const cards = column.cardIds
               .map((id) => board.cards[id])
