@@ -6,6 +6,7 @@ import { getCurrentWindow, Window } from "@tauri-apps/api/window";
 import { CardContextMenu } from "@/components/board/CardContextMenu";
 import { CardCreateDialog } from "@/components/board/CardCreateDialog";
 import { CardDetailDialog } from "@/components/board/CardDetailDialog";
+import { CardView } from "@/components/board/CardView";
 import { ColumnContextMenu } from "@/components/board/ColumnContextMenu";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,7 +20,6 @@ import { Input } from "@/components/ui/input";
 import { getAutostart, setAutostart } from "@/lib/autostart";
 import { exportBoardToFile, importBoardFromFile } from "@/lib/boardIO";
 import { COLUMN_GRID_STYLE } from "@/lib/columnGrid";
-import { dueColorClass, dueStatus } from "@/lib/date";
 import {
   getWidgetSettings,
   saveWidgetSettings,
@@ -97,7 +97,7 @@ export function WidgetView() {
 
   return (
     <div
-      className="relative flex h-screen flex-col gap-2 rounded-xl border p-2 text-sm text-foreground shadow-lg"
+      className="relative flex h-screen flex-col gap-2 rounded-xl border p-2 text-sm text-foreground shadow-lg select-none"
       style={rootStyle as React.CSSProperties}
     >
       {/* 배경 레이어: 불투명도만 이 레이어에 적용해 내용은 선명하게 유지 */}
@@ -179,7 +179,7 @@ export function WidgetView() {
         <p className="text-xs text-muted-foreground">불러오는 중…</p>
       ) : (
         <div
-          className="grid min-h-0 flex-1 auto-rows-min gap-2 overflow-y-auto"
+          className="grid min-h-0 flex-1 gap-2 overflow-y-auto"
           style={COLUMN_GRID_STYLE}
         >
           {board.columns.map((column) => (
@@ -254,7 +254,7 @@ function WidgetColumn({
 
   return (
     <ColumnContextMenu
-      className="flex min-w-0 flex-col gap-1 rounded-md bg-muted/50 p-1"
+      className="flex h-full min-h-0 min-w-0 flex-col gap-1 rounded-md bg-muted/50 p-1.5"
       onAddCard={() => onOpenCreate(column.id)}
       onRename={startRename}
       onDelete={confirmDelete}
@@ -275,13 +275,13 @@ function WidgetColumn({
               setIsEditingTitle(false);
             }
           }}
-          className="h-6 text-xs"
+          className="h-7"
         />
       ) : (
         <button
           type="button"
           onClick={startRename}
-          className="truncate rounded px-1 text-left text-xs font-medium hover:bg-accent"
+          className="truncate rounded px-1 py-0.5 text-left text-sm font-semibold hover:bg-accent"
         >
           {column.title}{" "}
           <span className="font-normal text-muted-foreground">
@@ -294,56 +294,16 @@ function WidgetColumn({
         onDoubleClick={(e) => {
           if (e.target === e.currentTarget) onOpenCreate(column.id);
         }}
-        className="flex min-h-[32px] flex-col gap-1"
+        className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto"
       >
-        {cards.map((card) => {
-          const doneCount = card.checklist.filter((i) => i.done).length;
-          const hasMeta =
-            Boolean(card.dueDate) ||
-            card.checklist.length > 0 ||
-            card.labels.length > 0;
-          const due = dueStatus(card.dueDate);
-          return (
-            <CardContextMenu key={card.id} card={card} onOpen={onOpenCard}>
-              <div
-                className={`rounded border bg-card px-1.5 py-1 ${
-                  due === "overdue"
-                    ? "border-l-2 border-l-destructive"
-                    : due === "soon"
-                      ? "border-l-2 border-l-amber-500"
-                      : ""
-                }`}
-              >
-                <p className="truncate text-xs font-medium">{card.title}</p>
-                {hasMeta && (
-                  <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[10px] text-muted-foreground">
-                    {card.dueDate && (
-                      <span className={dueColorClass(due)}>
-                        📅 {card.dueDate}
-                      </span>
-                    )}
-                    {card.checklist.length > 0 && (
-                      <span>
-                        ☑ {doneCount}/{card.checklist.length}
-                      </span>
-                    )}
-                    {card.labels.map((label) => (
-                      <span
-                        key={label}
-                        className="rounded bg-secondary px-1 py-0.5"
-                      >
-                        {label}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </CardContextMenu>
-          );
-        })}
+        {cards.map((card) => (
+          <CardContextMenu key={card.id} card={card} onOpen={onOpenCard}>
+            <CardView card={card} />
+          </CardContextMenu>
+        ))}
         {cards.length === 0 && (
-          <p className="pointer-events-none px-1 text-[10px] text-muted-foreground">
-            더블클릭 / 우클릭으로 카드 추가
+          <p className="pointer-events-none px-1 pt-1 text-xs text-muted-foreground">
+            더블클릭하거나 우클릭해서 카드를 추가하세요.
           </p>
         )}
       </div>

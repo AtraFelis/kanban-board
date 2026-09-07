@@ -118,7 +118,7 @@ export function ColumnView({
         onDoubleClick={(e) => {
           if (e.target === e.currentTarget) onOpenCreate(column.id);
         }}
-        className={`flex min-h-[60px] flex-1 flex-col gap-2 rounded-md p-0.5 transition-colors ${
+        className={`flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto rounded-md p-0.5 transition-colors ${
           isOver ? "bg-accent/60" : ""
         }`}
       >

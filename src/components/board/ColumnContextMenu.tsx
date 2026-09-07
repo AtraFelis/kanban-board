@@ -24,7 +24,7 @@ export function ColumnContextMenu({
   onDelete,
   onDoubleClick,
   children,
-  className = "flex min-w-0 flex-col gap-2 rounded-lg bg-muted/50 p-2",
+  className = "flex h-full min-h-0 min-w-0 flex-col gap-2 rounded-lg bg-muted/50 p-2",
 }: ColumnContextMenuProps) {
   return (
     <ContextMenu modal={false}>

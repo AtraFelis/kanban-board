@@ -123,7 +123,7 @@ export function BoardView() {
   }
 
   return (
-    <div className="flex h-screen flex-col gap-3 p-3">
+    <div className="flex h-screen flex-col gap-3 p-3 select-none">
       <BoardHeader title={board.title} />
 
       <DndContext
@@ -136,7 +136,7 @@ export function BoardView() {
       >
         {/* 넓으면 한 줄에 나눠 채우고, 좁으면 아랫줄로 접히는 그리드 (가로 스크롤 없음) */}
         <div
-          className="grid min-h-0 flex-1 auto-rows-min gap-3 overflow-y-auto pb-2"
+          className="grid min-h-0 flex-1 gap-3 overflow-y-auto pb-2"
           style={COLUMN_GRID_STYLE}
         >
           {board.columns.map((column) => {
