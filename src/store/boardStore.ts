@@ -67,7 +67,13 @@ export const useBoardStore = create<BoardState>()(
     init: async () => {
       const saved = await loadBoard();
       set((state) => {
-        state.board = saved ?? createDefaultBoard();
+        const board = saved ?? createDefaultBoard();
+        // 마이그레이션: createdAt이 없던 기존 카드는 지금 시각으로 채운다.
+        const now = new Date().toISOString();
+        for (const card of Object.values(board.cards)) {
+          if (!card.createdAt) card.createdAt = now;
+        }
+        state.board = board;
         state.isLoaded = true;
       });
     },
@@ -108,6 +114,7 @@ export const useBoardStore = create<BoardState>()(
           labels: input.labels ?? [],
           checklist: input.checklist ?? [],
           order: column.cardIds.length,
+          createdAt: new Date().toISOString(),
         };
         column.cardIds.push(id);
       });
