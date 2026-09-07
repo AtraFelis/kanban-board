@@ -17,6 +17,7 @@ import { useBoardStore } from "@/store/boardStore";
 import type { Board, Card } from "@/types";
 
 import { BoardHeader } from "./BoardHeader";
+import { CardCreateDialog } from "./CardCreateDialog";
 import { CardDetailDialog } from "./CardDetailDialog";
 import { CardView } from "./CardView";
 import { ColumnView } from "./ColumnView";
@@ -52,6 +53,7 @@ export function BoardView() {
 
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
   const [openCardId, setOpenCardId] = useState<string | null>(null);
+  const [createColumnId, setCreateColumnId] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -143,6 +145,7 @@ export function BoardView() {
                 column={column}
                 cards={cards}
                 onOpenCard={setOpenCardId}
+                onOpenCreate={setCreateColumnId}
               />
             );
           })}
@@ -156,6 +159,10 @@ export function BoardView() {
       <CardDetailDialog
         cardId={openCardId}
         onClose={() => setOpenCardId(null)}
+      />
+      <CardCreateDialog
+        columnId={createColumnId}
+        onClose={() => setCreateColumnId(null)}
       />
     </div>
   );

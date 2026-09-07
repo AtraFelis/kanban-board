@@ -16,10 +16,16 @@ interface ColumnViewProps {
   column: Column;
   cards: Card[];
   onOpenCard: (cardId: string) => void;
+  onOpenCreate: (columnId: string) => void;
 }
 
 // 컬럼 한 개: 제목 편집, 카드 목록(드롭 대상), 카드 추가, 컬럼 삭제.
-export function ColumnView({ column, cards, onOpenCard }: ColumnViewProps) {
+export function ColumnView({
+  column,
+  cards,
+  onOpenCard,
+  onOpenCreate,
+}: ColumnViewProps) {
   const renameColumn = useBoardStore((s) => s.renameColumn);
   const removeColumn = useBoardStore((s) => s.removeColumn);
   const addCard = useBoardStore((s) => s.addCard);
@@ -141,6 +147,15 @@ export function ColumnView({ column, cards, onOpenCard }: ColumnViewProps) {
           />
           <Button type="submit" size="sm" disabled={!newCardTitle.trim()}>
             추가
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={() => onOpenCreate(column.id)}
+            title="설명·라벨·체크리스트까지 채워서 추가"
+          >
+            상세
           </Button>
         </div>
       </form>
