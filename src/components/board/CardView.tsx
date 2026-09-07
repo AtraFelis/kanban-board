@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { dueColorClass, dueStatus } from "@/lib/date";
 import { useBoardStore } from "@/store/boardStore";
@@ -25,6 +25,7 @@ export function CardView({ card, onOpen }: CardViewProps) {
   const [descOpen, setDescOpen] = useState(false);
   const [listOpen, setListOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const dueInputRef = useRef<HTMLInputElement>(null);
 
   const doneCount = card.checklist.filter((item) => item.done).length;
   const due = dueStatus(card.dueDate);
@@ -59,6 +60,17 @@ export function CardView({ card, onOpen }: CardViewProps) {
     });
   }
 
+  // 마감일 뱃지를 누르면 편집창 대신 달력을 바로 띄운다.
+  function openDuePicker(e: React.MouseEvent) {
+    e.stopPropagation();
+    const el = dueInputRef.current as
+      | (HTMLInputElement & { showPicker?: () => void })
+      | null;
+    if (!el) return;
+    if (el.showPicker) el.showPicker();
+    else el.focus();
+  }
+
   return (
     // group: 호버 시 삭제 버튼 노출. 삭제 확인 다이얼로그는 클릭 가능한 카드 div의
     // 바깥(형제)에 두어야 한다 — React 포털은 이벤트가 컴포넌트 트리를 타고 올라가
@@ -67,7 +79,7 @@ export function CardView({ card, onOpen }: CardViewProps) {
       <div
         role={onOpen ? "button" : undefined}
         tabIndex={onOpen ? 0 : undefined}
-        onClick={onOpen}
+        onDoubleClick={onOpen}
         onKeyDown={(e) => {
           if (onOpen && (e.key === "Enter" || e.key === " ")) {
             e.preventDefault();
@@ -201,7 +213,36 @@ export function CardView({ card, onOpen }: CardViewProps) {
         {hasBottomMeta && (
           <div className="mt-1 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
             {card.dueDate && (
-              <span className={dueColorClass(due)}>📅 {card.dueDate}</span>
+              <span
+                className={`relative inline-flex items-center ${dueColorClass(due)}`}
+              >
+                <button
+                  type="button"
+                  aria-label="마감일 변경"
+                  onPointerDown={stopBubble}
+                  onKeyDown={stopBubble}
+                  onClick={openDuePicker}
+                  className="hover:underline"
+                >
+                  📅 {card.dueDate}
+                </button>
+                {/* showPicker()로 달력을 띄우기 위한 숨겨진 입력. display:none이면 안 됨 */}
+                <input
+                  ref={dueInputRef}
+                  type="date"
+                  value={card.dueDate}
+                  onPointerDown={stopBubble}
+                  onClick={stopBubble}
+                  onChange={(e) =>
+                    updateCard(card.id, {
+                      dueDate: e.target.value || undefined,
+                    })
+                  }
+                  tabIndex={-1}
+                  aria-hidden="true"
+                  className="pointer-events-none absolute bottom-0 left-0 size-0 opacity-0"
+                />
+              </span>
             )}
             {card.labels.map((label) => (
               <span key={label} className="rounded bg-secondary px-1 py-0.5">
