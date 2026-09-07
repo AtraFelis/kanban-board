@@ -1,0 +1,19 @@
+# 모든 텍스트 파일은 저장소에 LF로 저장하고 체크아웃 시에도 LF를 유지한다.
+# (Windows에서 작업해도 CRLF 변환 경고가 나지 않게 함)
+* text=auto eol=lf
+
+# Windows 전용 스크립트만 CRLF
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+*.ps1  text eol=crlf
+
+# 바이너리 (자동 판별에 맡기지 않음)
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.icns  binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
