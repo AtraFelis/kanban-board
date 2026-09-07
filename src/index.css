@@ -116,4 +116,8 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* 위젯 창은 투명하게 두고, 패널 배경은 WidgetView가 그린다. */
+  body.widget-window {
+    background: transparent;
+  }
 }

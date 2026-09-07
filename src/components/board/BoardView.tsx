@@ -13,7 +13,7 @@ import {
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 
-import { syncMinBoardWidth } from "@/lib/window";
+import { COLUMN_GRID_STYLE } from "@/lib/columnGrid";
 import { useBoardStore } from "@/store/boardStore";
 import type { Board, Card } from "@/types";
 
@@ -66,12 +66,6 @@ export function BoardView() {
   useEffect(() => {
     void init();
   }, [init]);
-
-  // 컬럼 수가 바뀌면 창 최소 너비를 다시 맞춘다.
-  const columnCount = board?.columns.length ?? 0;
-  useEffect(() => {
-    if (columnCount > 0) syncMinBoardWidth(columnCount);
-  }, [columnCount]);
 
   const activeCard = useMemo<Card | null>(
     () => (activeCardId && board ? (board.cards[activeCardId] ?? null) : null),
@@ -140,8 +134,11 @@ export function BoardView() {
         onDragEnd={handleDragEnd}
         onDragCancel={() => setActiveCardId(null)}
       >
-        {/* 컬럼은 남은 너비를 나눠 갖고(flex-1), 최소 너비 아래로만 가로 스크롤 */}
-        <div className="flex flex-1 items-stretch gap-3 overflow-x-auto pb-2">
+        {/* 넓으면 한 줄에 나눠 채우고, 좁으면 아랫줄로 접히는 그리드 (가로 스크롤 없음) */}
+        <div
+          className="grid min-h-0 flex-1 auto-rows-min gap-3 overflow-y-auto pb-2"
+          style={COLUMN_GRID_STYLE}
+        >
           {board.columns.map((column) => {
             const cards = column.cardIds
               .map((id) => board.cards[id])

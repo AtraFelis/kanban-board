@@ -16,8 +16,24 @@
         "title": "칸반보드",
         "width": 960,
         "height": 820,
-        "minWidth": 480,
-        "minHeight": 780
+        "minWidth": 360,
+        "minHeight": 780,
+        "visible": false
+      },
+      {
+        "label": "widget",
+        "title": "칸반보드 위젯",
+        "url": "index.html?view=widget",
+        "width": 560,
+        "height": 460,
+        "minWidth": 320,
+        "minHeight": 260,
+        "decorations": false,
+        "transparent": true,
+        "resizable": true,
+        "skipTaskbar": true,
+        "shadow": false,
+        "visible": true
       }
     ],
     "security": {

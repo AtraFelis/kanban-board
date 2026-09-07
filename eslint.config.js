@@ -26,6 +26,11 @@ export default tseslint.config(
         "warn",
         { allowConstantExport: true },
       ],
+      // _ 로 시작하는 인자/변수는 "의도적으로 안 씀"으로 허용.
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
     },
   },
   {
