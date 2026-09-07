@@ -1,34 +1,31 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { ask } from "@tauri-apps/plugin-dialog";
 import { getCurrentWindow, Window } from "@tauri-apps/api/window";
 
-import { CardContextMenu } from "@/components/board/CardContextMenu";
+import { BoardColumns } from "@/components/board/BoardColumns";
 import { CardCreateDialog } from "@/components/board/CardCreateDialog";
 import { CardDetailDialog } from "@/components/board/CardDetailDialog";
-import { CardView } from "@/components/board/CardView";
-import { ColumnContextMenu } from "@/components/board/ColumnContextMenu";
-import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { getAutostart, setAutostart } from "@/lib/autostart";
 import { exportBoardToFile, importBoardFromFile } from "@/lib/boardIO";
-import { COLUMN_GRID_STYLE } from "@/lib/columnGrid";
 import {
   getWidgetSettings,
   saveWidgetSettings,
   type WidgetSettings,
 } from "@/lib/widgetSettings";
 import { useBoardStore } from "@/store/boardStore";
-import type { Board, Column } from "@/types";
 
 import { WidgetSettingsDialog } from "./WidgetSettingsDialog";
+
+// 위젯 컬럼은 풀보드보다 조금 더 컴팩트하게.
+const WIDGET_COLUMN_CLASS =
+  "flex h-full min-h-0 min-w-0 flex-col gap-1 rounded-md bg-muted/50 p-1.5";
 
 // 풀보드 창을 띄운다 (숨겨져 있으면 표시 + 포커스).
 async function openFullBoard() {
@@ -51,7 +48,7 @@ async function applyPinToWindow(pinned: boolean) {
   }
 }
 
-// 바탕화면에 상주하는 작은 보드. 더블클릭·우클릭으로 카드 추가, 카드 우클릭으로 수정/이동/삭제.
+// 바탕화면에 상주하는 작은 보드. 헤더 없이 보드만 보이고, 위젯 우클릭으로 설정.
 export function WidgetView() {
   const board = useBoardStore((s) => s.board);
   const isLoaded = useBoardStore((s) => s.isLoaded);
@@ -96,103 +93,69 @@ export function WidgetView() {
   if (settings.textColor) rootStyle["--foreground"] = settings.textColor;
 
   return (
-    <div
-      className="relative flex h-screen flex-col gap-2 rounded-xl border p-2 text-sm text-foreground shadow-lg select-none"
-      style={rootStyle as React.CSSProperties}
-    >
-      {/* 배경 레이어: 불투명도만 이 레이어에 적용해 내용은 선명하게 유지 */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10 rounded-xl backdrop-blur"
-        style={{
-          backgroundColor: settings.bgColor ?? "var(--background)",
-          opacity: settings.opacity,
-        }}
-      />
-
-      {/* 잠겨 있지 않을 때만 이 영역을 잡고 창을 옮길 수 있다 */}
-      <div
-        {...(locked ? {} : { "data-tauri-drag-region": true })}
-        className={`flex items-center justify-between px-1 ${
-          locked ? "" : "cursor-move"
-        }`}
-      >
-        <span
-          {...(locked ? {} : { "data-tauri-drag-region": true })}
-          className="font-semibold"
-        >
-          칸반보드
-        </span>
-        <div className="flex items-center gap-1">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                className="h-6 px-2 text-xs"
-                aria-label="위젯 설정"
-              >
-                ⋯
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onSelect={() => updateSettings({ locked: !locked })}
-              >
-                {locked ? "바탕화면 고정 해제" : "바탕화면에 고정"}
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={toggleAutostart}>
-                {autostart ? "✓ 시작 시 자동 실행" : "시작 시 자동 실행"}
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setSettingsOpen(true)}>
-                모양 설정…
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onSelect={() => {
-                  if (board) void exportBoardToFile(board);
-                }}
-              >
-                내보내기 (JSON)
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={() => void importBoardFromFile(replaceBoard)}
-              >
-                가져오기 (JSON)
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            className="h-6 px-2 text-xs"
-            onClick={openFullBoard}
+    <>
+      <ContextMenu modal={false}>
+        <ContextMenuTrigger asChild>
+          <div
+            // 잠기지 않았으면 빈 영역을 잡아 창을 옮길 수 있다 (컬럼/카드는 자식이라 제외).
+            {...(locked ? {} : { "data-tauri-drag-region": true })}
+            className="relative flex h-screen flex-col rounded-xl border p-2 text-sm text-foreground shadow-lg select-none"
+            style={rootStyle as React.CSSProperties}
           >
-            풀보드
-          </Button>
-        </div>
-      </div>
-
-      {!isLoaded || !board ? (
-        <p className="text-xs text-muted-foreground">불러오는 중…</p>
-      ) : (
-        <div
-          className="grid min-h-0 flex-1 gap-2 overflow-y-auto"
-          style={COLUMN_GRID_STYLE}
-        >
-          {board.columns.map((column) => (
-            <WidgetColumn
-              key={column.id}
-              column={column}
-              board={board}
-              onOpenCard={setOpenCardId}
-              onOpenCreate={setCreateColumnId}
+            {/* 배경 레이어: 불투명도만 이 레이어에 적용해 내용은 선명하게 유지 */}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 -z-10 rounded-xl backdrop-blur"
+              style={{
+                backgroundColor: settings.bgColor ?? "var(--background)",
+                opacity: settings.opacity,
+              }}
             />
-          ))}
-        </div>
-      )}
+
+            {!isLoaded || !board ? (
+              <p className="text-xs text-muted-foreground">불러오는 중…</p>
+            ) : (
+              <BoardColumns
+                board={board}
+                onOpenCard={setOpenCardId}
+                onOpenCreate={setCreateColumnId}
+                columnClassName={WIDGET_COLUMN_CLASS}
+              />
+            )}
+          </div>
+        </ContextMenuTrigger>
+
+        <ContextMenuContent>
+          <ContextMenuItem onSelect={() => void openFullBoard()}>
+            풀보드 열기
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem
+            onSelect={() => updateSettings({ locked: !locked })}
+          >
+            {locked ? "바탕화면 고정 해제" : "바탕화면에 고정"}
+          </ContextMenuItem>
+          <ContextMenuItem onSelect={toggleAutostart}>
+            {autostart ? "✓ 시작 시 자동 실행" : "시작 시 자동 실행"}
+          </ContextMenuItem>
+          <ContextMenuItem onSelect={() => setSettingsOpen(true)}>
+            모양 설정…
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem
+            onSelect={() => {
+              if (board) void exportBoardToFile(board);
+            }}
+          >
+            내보내기 (JSON)
+          </ContextMenuItem>
+          <ContextMenuItem
+            onSelect={() => void importBoardFromFile(replaceBoard)}
+          >
+            가져오기 (JSON)
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
 
       <CardDetailDialog
         cardId={openCardId}
@@ -208,105 +171,6 @@ export function WidgetView() {
         settings={settings}
         onChange={updateSettings}
       />
-    </div>
-  );
-}
-
-function WidgetColumn({
-  column,
-  board,
-  onOpenCard,
-  onOpenCreate,
-}: {
-  column: Column;
-  board: Board;
-  onOpenCard: (cardId: string) => void;
-  onOpenCreate: (columnId: string) => void;
-}) {
-  const renameColumn = useBoardStore((s) => s.renameColumn);
-  const removeColumn = useBoardStore((s) => s.removeColumn);
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [titleDraft, setTitleDraft] = useState(column.title);
-
-  const cards = column.cardIds
-    .map((id) => board.cards[id])
-    .filter((card): card is NonNullable<typeof card> => Boolean(card));
-
-  function startRename() {
-    setTitleDraft(column.title);
-    setIsEditingTitle(true);
-  }
-
-  function commitTitle() {
-    const trimmed = titleDraft.trim();
-    if (trimmed && trimmed !== column.title) renameColumn(column.id, trimmed);
-    else setTitleDraft(column.title);
-    setIsEditingTitle(false);
-  }
-
-  async function confirmDelete() {
-    const ok = await ask(
-      `"${column.title}" 컬럼을 삭제하면 이 컬럼의 카드도 모두 삭제됩니다.\n계속할까요?`,
-      { title: "컬럼 삭제", kind: "warning", okLabel: "삭제", cancelLabel: "취소" },
-    );
-    if (ok) removeColumn(column.id);
-  }
-
-  return (
-    <ColumnContextMenu
-      className="flex h-full min-h-0 min-w-0 flex-col gap-1 rounded-md bg-muted/50 p-1.5"
-      onAddCard={() => onOpenCreate(column.id)}
-      onRename={startRename}
-      onDelete={confirmDelete}
-      onDoubleClick={(e) => {
-        if (e.target === e.currentTarget) onOpenCreate(column.id);
-      }}
-    >
-      {isEditingTitle ? (
-        <Input
-          autoFocus
-          value={titleDraft}
-          onChange={(e) => setTitleDraft(e.target.value)}
-          onBlur={commitTitle}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") commitTitle();
-            if (e.key === "Escape") {
-              setTitleDraft(column.title);
-              setIsEditingTitle(false);
-            }
-          }}
-          className="h-7"
-        />
-      ) : (
-        <button
-          type="button"
-          onClick={startRename}
-          className="truncate rounded px-1 py-0.5 text-left text-sm font-semibold hover:bg-accent"
-        >
-          {column.title}{" "}
-          <span className="font-normal text-muted-foreground">
-            {cards.length}
-          </span>
-        </button>
-      )}
-
-      <div
-        onDoubleClick={(e) => {
-          if (e.target === e.currentTarget) onOpenCreate(column.id);
-        }}
-        className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto"
-      >
-        {cards.map((card) => (
-          <CardContextMenu key={card.id} card={card} onOpen={onOpenCard}>
-            <CardView card={card} />
-          </CardContextMenu>
-        ))}
-        {cards.length === 0 && (
-          <p className="pointer-events-none px-1 pt-1 text-xs text-muted-foreground">
-            더블클릭하거나 우클릭해서 카드를 추가하세요.
-          </p>
-        )}
-      </div>
-    </ColumnContextMenu>
+    </>
   );
 }

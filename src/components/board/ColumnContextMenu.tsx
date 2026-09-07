@@ -29,7 +29,12 @@ export function ColumnContextMenu({
   return (
     <ContextMenu modal={false}>
       <ContextMenuTrigger asChild>
-        <div onDoubleClick={onDoubleClick} className={className}>
+        <div
+          onDoubleClick={onDoubleClick}
+          // 상위(위젯) 컨텍스트 메뉴로 우클릭이 번지지 않게 한다.
+          onContextMenu={(e) => e.stopPropagation()}
+          className={className}
+        >
           {children}
         </div>
       </ContextMenuTrigger>

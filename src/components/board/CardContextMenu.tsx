@@ -44,7 +44,7 @@ export function CardContextMenu({ card, onOpen, children }: CardContextMenuProps
       <ContextMenu modal={false}>
         {/* asChild 대상은 ref·props를 그대로 받는 순수 div여야 한다 (CardView는 아님) */}
         <ContextMenuTrigger asChild>
-          <div>{children}</div>
+          <div onContextMenu={(e) => e.stopPropagation()}>{children}</div>
         </ContextMenuTrigger>
         <ContextMenuContent>
           <ContextMenuItem onSelect={() => onOpen(card.id)}>수정</ContextMenuItem>
