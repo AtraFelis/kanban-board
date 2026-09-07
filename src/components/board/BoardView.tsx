@@ -13,6 +13,7 @@ import {
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 
+import { syncMinBoardWidth } from "@/lib/window";
 import { useBoardStore } from "@/store/boardStore";
 import type { Board, Card } from "@/types";
 
@@ -65,6 +66,12 @@ export function BoardView() {
   useEffect(() => {
     void init();
   }, [init]);
+
+  // 컬럼 수가 바뀌면 창 최소 너비를 다시 맞춘다.
+  const columnCount = board?.columns.length ?? 0;
+  useEffect(() => {
+    if (columnCount > 0) syncMinBoardWidth(columnCount);
+  }, [columnCount]);
 
   const activeCard = useMemo<Card | null>(
     () => (activeCardId && board ? (board.cards[activeCardId] ?? null) : null),

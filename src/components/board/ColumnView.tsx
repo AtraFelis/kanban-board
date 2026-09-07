@@ -62,7 +62,7 @@ export function ColumnView({
   }
 
   return (
-    <div className="flex h-full min-w-[260px] max-w-[340px] flex-1 flex-col gap-2 rounded-lg bg-muted/50 p-2">
+    <div className="flex h-full min-w-[260px] flex-1 flex-col gap-2 rounded-lg bg-muted/50 p-2">
       <div className="flex items-center gap-1">
         {isEditingTitle ? (
           <Input
