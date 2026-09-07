@@ -15,8 +15,7 @@
         "label": "main",
         "title": "칸반보드",
         "width": 800,
-        "height": 600,
-        "alwaysOnTop": true
+        "height": 600
       }
     ],
     "security": {
