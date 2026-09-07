@@ -48,7 +48,7 @@ export function ColumnView({ column, cards, onOpenCard }: ColumnViewProps) {
     event.preventDefault();
     const trimmed = newCardTitle.trim();
     if (!trimmed) return;
-    addCard(column.id, trimmed);
+    addCard(column.id, { title: trimmed });
     setNewCardTitle("");
   }
 
