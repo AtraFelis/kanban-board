@@ -50,6 +50,7 @@ function migrate(board: Board): void {
   if (!doneExists) {
     board.doneColumnId = board.columns.find((c) => c.title === "완료")?.id;
   }
+  if (!board.archivedCards) board.archivedCards = [];
 }
 
 // reload()가 자동 저장을 다시 유발해 창끼리 무한 루프가 도는 것을 막는 플래그.
@@ -122,10 +123,21 @@ interface BoardState {
     toIndex: number,
     opts?: { sectionId?: string | null; skipCompletion?: boolean },
   ) => void;
+
+  // 완료 컬럼 카드를 보드 밖(archivedCards)으로 치운다. 완료 컬럼 카드가 아니면 무시.
+  archiveCard: (cardId: string) => void;
+  archiveCards: (cardIds: string[]) => void;
+  // 보관함 카드를 완료 컬럼(없으면 첫 컬럼) 맨 아래로 되돌린다.
+  restoreCard: (cardId: string) => void;
+  deleteArchivedCard: (cardId: string) => void;
+  // 완료 후 N일 지난 카드 자동 보관 (null/0이면 끔).
+  setAutoArchiveDays: (days: number | null) => void;
+  // autoArchiveDays 기준으로 오래된 완료 카드를 전부 보관한다. init 직후 1회 + 수동 실행.
+  sweepAutoArchive: () => void;
 }
 
 export const useBoardStore = create<BoardState>()(
-  immer((set) => ({
+  immer((set, get) => ({
     board: null,
     isLoaded: false,
 
@@ -137,6 +149,7 @@ export const useBoardStore = create<BoardState>()(
         state.board = board;
         state.isLoaded = true;
       });
+      get().sweepAutoArchive();
     },
 
     reload: async () => {
@@ -336,6 +349,78 @@ export const useBoardStore = create<BoardState>()(
           }
         }
       }),
+
+    archiveCard: (cardId) => get().archiveCards([cardId]),
+
+    archiveCards: (cardIds) =>
+      set((state) => {
+        const board = state.board;
+        if (!board) return;
+        const doneCol = board.columns.find((c) => c.id === board.doneColumnId);
+        if (!doneCol) return;
+        if (!board.archivedCards) board.archivedCards = [];
+        const now = new Date().toISOString();
+        for (const cardId of cardIds) {
+          const card = board.cards[cardId];
+          if (!card || !doneCol.cardIds.includes(cardId)) continue;
+          board.archivedCards.push({
+            ...card,
+            labels: [...card.labels],
+            checklist: card.checklist.map((i) => ({ ...i })),
+            sectionId: undefined,
+            archivedAt: now,
+          });
+          delete board.cards[cardId];
+          doneCol.cardIds = doneCol.cardIds.filter((id) => id !== cardId);
+        }
+        renumber(board, doneCol.id);
+      }),
+
+    restoreCard: (cardId) =>
+      set((state) => {
+        const board = state.board;
+        if (!board?.archivedCards) return;
+        const idx = board.archivedCards.findIndex((c) => c.id === cardId);
+        if (idx === -1) return;
+        const target =
+          board.columns.find((c) => c.id === board.doneColumnId) ??
+          board.columns[0];
+        if (!target) return;
+        const [card] = board.archivedCards.splice(idx, 1);
+        delete card.archivedAt;
+        delete card.sectionId;
+        card.order = target.cardIds.length;
+        board.cards[card.id] = card;
+        target.cardIds.push(card.id);
+      }),
+
+    deleteArchivedCard: (cardId) =>
+      set((state) => {
+        const arr = state.board?.archivedCards;
+        if (!arr) return;
+        const idx = arr.findIndex((c) => c.id === cardId);
+        if (idx !== -1) arr.splice(idx, 1);
+      }),
+
+    setAutoArchiveDays: (days) =>
+      set((state) => {
+        if (!state.board) return;
+        state.board.autoArchiveDays = days && days > 0 ? days : undefined;
+      }),
+
+    sweepAutoArchive: () => {
+      const board = get().board;
+      if (!board?.autoArchiveDays || !board.doneColumnId) return;
+      const doneCol = board.columns.find((c) => c.id === board.doneColumnId);
+      if (!doneCol) return;
+      const cutoff = Date.now() - board.autoArchiveDays * 86_400_000;
+      const stale = doneCol.cardIds.filter((id) => {
+        const c = board.cards[id];
+        const ts = c?.completedAt ?? c?.createdAt;
+        return ts ? new Date(ts).getTime() < cutoff : false;
+      });
+      if (stale.length) get().archiveCards(stale);
+    },
   })),
 );
 

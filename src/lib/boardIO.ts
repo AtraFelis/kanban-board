@@ -28,7 +28,8 @@ function isBoard(value: unknown): value is Board {
     typeof b.title !== "string" ||
     !Array.isArray(b.columns) ||
     typeof b.cards !== "object" ||
-    b.cards === null
+    b.cards === null ||
+    (b.archivedCards !== undefined && !Array.isArray(b.archivedCards))
   ) {
     return false;
   }
