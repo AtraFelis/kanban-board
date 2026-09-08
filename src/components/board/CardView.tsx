@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 
-import { dueColorClass, dueStatus } from "@/lib/date";
+import { dueColorClass, dueStatus, toISODate } from "@/lib/date";
 import { useBoardStore } from "@/store/boardStore";
 import type { Card } from "@/types";
 
@@ -21,6 +21,14 @@ const CHECKLIST_PREVIEW_LIMIT = 3;
 // 설명·체크리스트는 카드에서 바로 보이되, 길면 접어서 클릭 시에만 전체를 보여준다.
 export function CardView({ card, onOpen }: CardViewProps) {
   const updateCard = useBoardStore((s) => s.updateCard);
+  // 이 카드가 '완료' 컬럼에 있으면 마감일 대신 완료일을 보여준다.
+  const isCompleted = useBoardStore((s) => {
+    const b = s.board;
+    if (!b?.doneColumnId) return false;
+    return !!b.columns
+      .find((c) => c.id === b.doneColumnId)
+      ?.cardIds.includes(card.id);
+  });
 
   const [descOpen, setDescOpen] = useState(false);
   const [listOpen, setListOpen] = useState(false);
@@ -38,7 +46,14 @@ export function CardView({ card, onOpen }: CardViewProps) {
   const listLong = card.checklist.length > CHECKLIST_PREVIEW_LIMIT;
   const showItems = !listLong || listOpen;
 
-  const hasBottomMeta = Boolean(card.dueDate) || card.labels.length > 0;
+  // 완료 컬럼 카드는 완료일(없으면 시작일)을 라벨로 쓴다.
+  const completionDate = isCompleted
+    ? toISODate(card.completedAt ?? card.createdAt)
+    : null;
+  const hasBottomMeta =
+    Boolean(completionDate) ||
+    (!isCompleted && Boolean(card.dueDate)) ||
+    card.labels.length > 0;
 
   // 카드 내부의 컨트롤(펼침 토글·체크박스·삭제)이 카드 클릭(편집창 열기)이나
   // dnd-kit 드래그 시작(pointerdown)으로 번지지 않게 막는다.
@@ -212,7 +227,12 @@ export function CardView({ card, onOpen }: CardViewProps) {
 
         {hasBottomMeta && (
           <div className="mt-1 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
-            {card.dueDate && (
+            {completionDate && (
+              <span className="inline-flex items-center gap-1 rounded bg-emerald-500/15 px-1.5 py-0.5 font-medium text-emerald-700 dark:text-emerald-400">
+                ✓ 완료 {completionDate}
+              </span>
+            )}
+            {!isCompleted && card.dueDate && (
               <span
                 className={`relative inline-flex items-center ${dueColorClass(due)}`}
               >
