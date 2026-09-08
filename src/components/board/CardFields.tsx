@@ -278,7 +278,8 @@ export function CardFields({
             </li>
           ))}
         </ul>
-        <div ref={checklistAddRef} className="flex gap-1">
+        {/* scroll-mb: 타자기 스크롤로 이 행을 보이게 할 때 하단에 여유를 둔다 */}
+        <div ref={checklistAddRef} className="flex scroll-mb-6 gap-1">
           <Input
             value={checklistDraft}
             onChange={(e) => setChecklistDraft(e.target.value)}
