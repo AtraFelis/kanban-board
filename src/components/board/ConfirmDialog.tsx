@@ -44,7 +44,7 @@ export function ConfirmDialog({
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
         {description && (
-          <p className="text-sm break-words text-muted-foreground">
+          <p className="text-sm wrap-anywhere text-muted-foreground">
             {description}
           </p>
         )}
