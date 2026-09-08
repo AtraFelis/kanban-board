@@ -8,9 +8,11 @@ import { ask } from "@tauri-apps/plugin-dialog";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { friendlyDateLabel, todayISODate, toISODate } from "@/lib/date";
 import { useBoardStore } from "@/store/boardStore";
 import type { Card, Column } from "@/types";
 
+import { CardGroup } from "./CardGroup";
 import { ColumnContextMenu } from "./ColumnContextMenu";
 import { SortableCard } from "./SortableCard";
 
@@ -21,6 +23,33 @@ interface ColumnViewProps {
   onOpenCreate: (columnId: string) => void;
   className?: string;
   columnMenuExtra?: React.ReactNode;
+}
+
+interface DateGroup {
+  key: string;
+  label: string;
+  cardIds: string[];
+  defaultCollapsed: boolean;
+}
+
+// 완료 컬럼: 카드를 완료한 날짜(completedAt, 없으면 createdAt)로 묶는다. 최신 그룹이 위.
+function dateGroups(cards: Card[]): DateGroup[] {
+  const buckets = new Map<string, string[]>();
+  for (const card of cards) {
+    const key = toISODate(card.completedAt ?? card.createdAt);
+    const bucket = buckets.get(key);
+    if (bucket) bucket.push(card.id);
+    else buckets.set(key, [card.id]);
+  }
+  const today = todayISODate();
+  return [...buckets.entries()]
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([key, cardIds]) => ({
+      key,
+      label: friendlyDateLabel(key),
+      cardIds,
+      defaultCollapsed: key !== today,
+    }));
 }
 
 // 컬럼 한 개: 제목 편집, 카드 목록(드롭 대상), 우클릭·더블클릭으로 카드 추가, 컬럼 삭제.
@@ -40,6 +69,10 @@ export function ColumnView({
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(column.title);
+  // 완료 컬럼 날짜 그룹의 접힘 상태 (날짜 키 → 접힘). 영속화하지 않는다.
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(
+    {},
+  );
 
   // 빈 컬럼에도 카드를 떨어뜨릴 수 있도록 컬럼 자체를 드롭 대상으로 등록.
   const { setNodeRef, isOver } = useDroppable({
@@ -133,19 +166,60 @@ export function ColumnView({
           isOver ? "bg-accent/60" : ""
         }`}
       >
-        <SortableContext
-          items={column.cardIds}
-          strategy={verticalListSortingStrategy}
-        >
-          {cards.map((card) => (
-            <SortableCard key={card.id} card={card} onOpen={onOpenCard} />
-          ))}
-        </SortableContext>
-
-        {cards.length === 0 && (
-          <p className="pointer-events-none px-1 pt-1 text-xs text-muted-foreground">
-            더블클릭하거나 우클릭해서 카드를 추가하세요.
-          </p>
+        {isDone ? (
+          <>
+            {dateGroups(cards).map((g) => {
+              const collapsed = collapsedGroups[g.key] ?? g.defaultCollapsed;
+              return (
+                <CardGroup
+                  key={g.key}
+                  label={g.label}
+                  count={g.cardIds.length}
+                  collapsed={collapsed}
+                  onToggle={() =>
+                    setCollapsedGroups((c) => ({ ...c, [g.key]: !collapsed }))
+                  }
+                >
+                  <SortableContext
+                    items={collapsed ? [] : g.cardIds}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {!collapsed &&
+                      cards
+                        .filter((card) => g.cardIds.includes(card.id))
+                        .map((card) => (
+                          <SortableCard
+                            key={card.id}
+                            card={card}
+                            onOpen={onOpenCard}
+                          />
+                        ))}
+                  </SortableContext>
+                </CardGroup>
+              );
+            })}
+            {cards.length === 0 && (
+              <p className="pointer-events-none px-1 pt-1 text-xs text-muted-foreground">
+                완료한 카드가 여기에 쌓입니다.
+              </p>
+            )}
+          </>
+        ) : (
+          <>
+            <SortableContext
+              items={column.cardIds}
+              strategy={verticalListSortingStrategy}
+            >
+              {cards.map((card) => (
+                <SortableCard key={card.id} card={card} onOpen={onOpenCard} />
+              ))}
+            </SortableContext>
+            {cards.length === 0 && (
+              <p className="pointer-events-none px-1 pt-1 text-xs text-muted-foreground">
+                더블클릭하거나 우클릭해서 카드를 추가하세요.
+              </p>
+            )}
+          </>
         )}
       </div>
     </ColumnContextMenu>

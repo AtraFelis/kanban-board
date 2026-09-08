@@ -3,10 +3,21 @@ export function todayISODate(): string {
   return toISODate(new Date());
 }
 
-function toISODate(d: Date): string {
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${d.getFullYear()}-${mm}-${dd}`;
+// Date를 로컬 기준 "YYYY-MM-DD"로. (ISO 문자열이나 Date 어느 쪽이든 넘길 수 있게)
+export function toISODate(d: Date | string): string {
+  const date = typeof d === "string" ? new Date(d) : d;
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${mm}-${dd}`;
+}
+
+// "YYYY-MM-DD"를 사람이 읽기 좋은 라벨로. 오늘/어제는 그 말로, 나머지는 그대로.
+export function friendlyDateLabel(iso: string): string {
+  if (iso === todayISODate()) return "오늘";
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (iso === toISODate(yesterday)) return "어제";
+  return iso;
 }
 
 export type DueStatus = "none" | "overdue" | "soon" | "later";

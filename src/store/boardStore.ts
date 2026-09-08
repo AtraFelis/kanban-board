@@ -212,6 +212,17 @@ export const useBoardStore = create<BoardState>()(
 
         renumber(state.board, fromColumn.id);
         if (fromColumn.id !== toColumn.id) renumber(state.board, toColumn.id);
+
+        // '완료' 컬럼에 들어오면 완료 시각을 찍고, 밖으로 나가면 지운다.
+        const card = state.board.cards[cardId];
+        if (card) {
+          const doneId = state.board.doneColumnId;
+          if (doneId && toColumn.id === doneId) {
+            if (!card.completedAt) card.completedAt = new Date().toISOString();
+          } else if (card.completedAt) {
+            delete card.completedAt;
+          }
+        }
       }),
   })),
 );
