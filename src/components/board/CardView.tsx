@@ -244,7 +244,7 @@ export function CardView({ card, onOpen }: CardViewProps) {
                   onClick={openDuePicker}
                   className="hover:underline"
                 >
-                  📅 {card.dueDate}
+                  마감 {card.dueDate}
                 </button>
                 {/* showPicker()로 달력을 띄우기 위한 숨겨진 입력. display:none이면 안 됨 */}
                 <input
