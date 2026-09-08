@@ -4,7 +4,7 @@ type SortKey = Exclude<ColumnSort["by"], "manual">;
 
 // 정렬 기준의 표시 이름과 기본 방향.
 export const SORT_BY_LABEL: Record<SortKey, string> = {
-  createdAt: "생성일",
+  createdAt: "시작일",
   dueDate: "마감일",
   label: "태그",
 };

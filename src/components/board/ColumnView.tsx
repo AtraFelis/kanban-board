@@ -9,7 +9,7 @@ import { ask } from "@tauri-apps/plugin-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { friendlyDateLabel, todayISODate, toISODate } from "@/lib/date";
-import { sortCards, sortSummary } from "@/lib/sortCards";
+import { nextSort, sortCards, sortSummary } from "@/lib/sortCards";
 import { useBoardStore } from "@/store/boardStore";
 import type { Card, Column } from "@/types";
 
@@ -166,14 +166,29 @@ export function ColumnView({
       </div>
 
       {sortLabel && (
-        <button
-          type="button"
-          onClick={() => setColumnSort(column.id, null)}
-          title="정렬 해제"
-          className="-mt-1 self-start rounded px-1 text-[11px] text-muted-foreground hover:bg-accent hover:text-foreground"
-        >
-          정렬: {sortLabel} ✕
-        </button>
+        <div className="-mt-1 flex items-center gap-0.5 self-start text-[11px] text-muted-foreground">
+          <button
+            type="button"
+            onClick={() => {
+              if (column.sort && column.sort.by !== "manual") {
+                setColumnSort(column.id, nextSort(column.sort, column.sort.by));
+              }
+            }}
+            title="클릭하면 오름차순 ↔ 내림차순"
+            className="rounded px-1 hover:bg-accent hover:text-foreground"
+          >
+            정렬: {sortLabel}
+          </button>
+          <button
+            type="button"
+            onClick={() => setColumnSort(column.id, null)}
+            title="정렬 해제"
+            aria-label="정렬 해제"
+            className="rounded px-0.5 hover:bg-accent hover:text-foreground"
+          >
+            ✕
+          </button>
+        </div>
       )}
 
       <div

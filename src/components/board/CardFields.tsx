@@ -9,30 +9,40 @@ import { useBoardStore } from "@/store/boardStore";
 
 import type { CardFormValue } from "./cardForm";
 
-const LABEL_LIST_ID = "card-label-suggestions";
+// 자동완성 후보를 한 번에 보여줄 최대 개수.
+const TAG_SUGGEST_LIMIT = 6;
 
 interface CardFieldsProps {
   value: CardFormValue;
   onChange: (patch: Partial<CardFormValue>) => void;
 }
 
-// 제목·설명·마감일·생성일·라벨·체크리스트 입력 묶음. value/onChange로 동작하되,
-// 라벨 자동완성 목록만 스토어에서 파생한다.
+// 제목·설명·시작일·마감일·색·태그·체크리스트 입력 묶음. value/onChange로 동작하되,
+// 태그 자동완성 목록만 스토어에서 파생한다.
 export function CardFields({ value, onChange }: CardFieldsProps) {
-  const [labelDraft, setLabelDraft] = useState("");
+  const [tagDraft, setTagDraft] = useState("");
+  const [tagSuggestOpen, setTagSuggestOpen] = useState(false);
+  const [activeTagIndex, setActiveTagIndex] = useState(-1);
   const [checklistDraft, setChecklistDraft] = useState("");
 
   const board = useBoardStore((s) => s.board);
-  const labelOptions = useMemo(
-    () => (board ? allLabels(board) : []),
-    [board],
-  );
+  const knownTags = useMemo(() => (board ? allLabels(board) : []), [board]);
 
-  function addLabel() {
-    const label = labelDraft.trim();
-    setLabelDraft("");
-    if (!label || value.labels.includes(label)) return;
-    onChange({ labels: [...value.labels, label] });
+  const tagSuggestions = useMemo(() => {
+    const q = tagDraft.trim().toLowerCase();
+    return knownTags
+      .filter((t) => !value.labels.includes(t))
+      .filter((t) => (q ? t.toLowerCase().includes(q) : true))
+      .slice(0, TAG_SUGGEST_LIMIT);
+  }, [knownTags, value.labels, tagDraft]);
+
+  function commitTag(raw: string) {
+    const tag = raw.trim();
+    setTagDraft("");
+    setTagSuggestOpen(false);
+    setActiveTagIndex(-1);
+    if (!tag || value.labels.includes(tag)) return;
+    onChange({ labels: [...value.labels, tag] });
   }
 
   function addChecklistItem() {
@@ -70,21 +80,21 @@ export function CardFields({ value, onChange }: CardFieldsProps) {
 
       <div className="flex flex-wrap gap-4 text-sm">
         <label className="grid gap-1">
-          <span className="font-medium">마감일</span>
+          <span className="font-medium">시작일</span>
           <Input
             type="date"
-            value={value.dueDate}
-            onChange={(e) => onChange({ dueDate: e.target.value })}
+            value={value.createdAt}
+            onChange={(e) => onChange({ createdAt: e.target.value })}
             className="w-44"
           />
         </label>
 
         <label className="grid gap-1">
-          <span className="font-medium">생성일</span>
+          <span className="font-medium">마감일</span>
           <Input
             type="date"
-            value={value.createdAt}
-            onChange={(e) => onChange({ createdAt: e.target.value })}
+            value={value.dueDate}
+            onChange={(e) => onChange({ dueDate: e.target.value })}
             className="w-44"
           />
         </label>
@@ -111,46 +121,87 @@ export function CardFields({ value, onChange }: CardFieldsProps) {
       </div>
 
       <div className="grid gap-1 text-sm">
-        <span className="font-medium">라벨</span>
+        <span className="font-medium">태그</span>
         {value.labels.length > 0 && (
           <div className="flex flex-wrap items-center gap-1">
-            {value.labels.map((label) => (
+            {value.labels.map((tag) => (
               <button
-                key={label}
+                key={tag}
                 type="button"
                 onClick={() =>
-                  onChange({ labels: value.labels.filter((l) => l !== label) })
+                  onChange({ labels: value.labels.filter((t) => t !== tag) })
                 }
-                className="rounded bg-secondary px-1.5 py-0.5 text-xs hover:line-through"
+                className="inline-flex items-center gap-1 rounded-md bg-secondary px-2 py-0.5 text-xs text-secondary-foreground hover:bg-secondary/70"
                 title="클릭하면 제거"
               >
-                {label} ✕
+                {tag}
+                <span aria-hidden className="text-muted-foreground">
+                  ✕
+                </span>
               </button>
             ))}
           </div>
         )}
-        <Input
-          value={labelDraft}
-          onChange={(e) => setLabelDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              addLabel();
-            }
-          }}
-          onBlur={addLabel}
-          placeholder="라벨 입력 후 Enter"
-          className="h-8"
-          list={LABEL_LIST_ID}
-        />
-        {/* 이전에 쓴 태그 자동완성 (네이티브 datalist) */}
-        <datalist id={LABEL_LIST_ID}>
-          {labelOptions
-            .filter((l) => !value.labels.includes(l))
-            .map((l) => (
-              <option key={l} value={l} />
-            ))}
-        </datalist>
+
+        <div className="relative">
+          <Input
+            value={tagDraft}
+            onChange={(e) => {
+              setTagDraft(e.target.value);
+              setTagSuggestOpen(true);
+              setActiveTagIndex(-1);
+            }}
+            onFocus={() => setTagSuggestOpen(true)}
+            onBlur={() => commitTag(tagDraft)}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowDown") {
+                e.preventDefault();
+                setTagSuggestOpen(true);
+                setActiveTagIndex((i) =>
+                  Math.min(i + 1, tagSuggestions.length - 1),
+                );
+              } else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                setActiveTagIndex((i) => Math.max(i - 1, -1));
+              } else if (e.key === "Enter") {
+                e.preventDefault();
+                commitTag(
+                  activeTagIndex >= 0
+                    ? tagSuggestions[activeTagIndex]
+                    : tagDraft,
+                );
+              } else if (e.key === "Escape") {
+                setTagSuggestOpen(false);
+                setActiveTagIndex(-1);
+              }
+            }}
+            placeholder="태그 입력 후 Enter"
+            className="h-8"
+          />
+
+          {tagSuggestOpen && tagSuggestions.length > 0 && (
+            <ul className="absolute top-full right-0 left-0 z-50 mt-1 max-h-44 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+              {tagSuggestions.map((tag, i) => (
+                <li key={tag}>
+                  <button
+                    type="button"
+                    // onMouseDown + preventDefault: 입력의 onBlur보다 먼저 실행돼야 함
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      commitTag(tag);
+                    }}
+                    onMouseEnter={() => setActiveTagIndex(i)}
+                    className={`w-full rounded px-2 py-1 text-left text-xs ${
+                      i === activeTagIndex ? "bg-accent" : ""
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-1 text-sm">
