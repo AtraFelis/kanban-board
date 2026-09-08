@@ -24,6 +24,8 @@ export interface Card {
   /** '완료' 컬럼으로 옮긴 시각 (ISO 8601). 완료 컬럼 밖으로 나가면 제거된다.
    *  완료 컬럼의 날짜별 그룹은 이 값을 기준으로 묶는다. */
   completedAt?: string;
+  /** 소속 카테고리 섹션 id (같은 컬럼의 Column.sections 참조). 없으면 '미분류'. */
+  sectionId?: string;
   /** 카드 개별 배경색 (CSS 색 문자열). 없으면 기본색. */
   color?: string;
 }
@@ -35,6 +37,14 @@ export interface ColumnSort {
   dir: "asc" | "desc";
 }
 
+// 컬럼 안의 카테고리 칸막이. 카드는 sectionId로 이 섹션을 참조한다.
+export interface ColumnSection {
+  id: string;
+  title: string;
+  /** 접힘 상태 — 새로고침에도 유지되도록 보드 데이터에 저장한다. */
+  collapsed?: boolean;
+}
+
 // 컬럼 한 개. 카드를 id 배열로 참조하며 이 배열 순서가 곧 표시 순서다.
 export interface Column {
   id: string;
@@ -42,6 +52,8 @@ export interface Column {
   cardIds: string[];
   /** 정렬 방식. 없으면 manual. */
   sort?: ColumnSort;
+  /** 카테고리 섹션들. 없거나 빈 배열이면 섹션 UI 미사용(평면 목록). */
+  sections?: ColumnSection[];
 }
 
 // 보드 한 개. 1차 버전은 단일 보드만 사용한다.
