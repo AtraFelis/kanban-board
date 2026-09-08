@@ -24,6 +24,8 @@ plan.md에는 없던 후속 Phase. `v0.1.0` 태그(Phase 4 완료) 이후 진행
 
 구현 대상: **5-1 ~ 5-5**. 구현 순서: 5-1 → 5-2 → 5-5 → 5-4 → 5-3.
 
+진행: 5-1·5-2·5-4·5-5 = PR #11 머지. **5-3 = 이 브랜치(`feat/phase5-sections`)**.
+
 ---
 
 ## 5-1. '완료' 컬럼 지정
@@ -70,8 +72,13 @@ interface Card    { /* ... */ sectionId?: string; }  // 없으면 '미분류'
 - `BoardColumns.tsx` `resolveDropTarget`: `overType==="section"` → `{columnId, sectionId, index}`.
   카드 위 → 그 카드의 `columnId`+`sectionId`, `index = cardIds.indexOf(overId)`.
   드래그 핸들러가 `moveCard(..., { sectionId })` 전달.
-- 신규 컴포넌트: `CardGroup.tsx`(접이식 그룹 셸, 날짜·섹션 공용), `SectionHeader.tsx`.
-- `ColumnContextMenu`에 "카테고리 추가"(작은 입력). done 컬럼에선 숨김.
+- 신규 컴포넌트: `CardGroup.tsx`(접이식 그룹 셸, label을 ReactNode로 확장),
+  `ColumnSectionGroup.tsx`(섹션별 droppable + 인라인 이름변경 + ConfirmDialog 삭제).
+- `ColumnContextMenu`에 "카테고리 추가"(작은 다이얼로그). done 컬럼에선 숨김.
+- **구현됨**: 완료 컬럼은 `column.sections` 무시(날짜 그룹 고정). moveCard가 대상 컬럼에
+  없는 섹션 id는 방어적으로 미분류 처리. handleDragOver는 같은 컬럼이라도 섹션이
+  바뀌면 실시간 반영, 같은 섹션 순서 변경만 dragEnd로. 정렬 가드는 "같은 컬럼·같은
+  섹션"일 때만 무시. 브라우저에서 추가/드래그/이름변경/삭제·미분류복귀·위젯 반영 확인.
 
 ## 5-4. 컬럼별 정렬 (태그 / 마감일 / 생성일)
 
