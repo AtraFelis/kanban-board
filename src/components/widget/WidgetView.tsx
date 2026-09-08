@@ -85,21 +85,28 @@ export function WidgetView() {
     void getAutostart().then(setAutostartState);
   }, [init]);
 
+  // 조정을 끝내는 순간 "위치를 잡았다"고 기록 → 다음 실행부터는 고정으로 시작.
+  function stampPositioned() {
+    setSettings((s) => {
+      if (s.everPositioned) return s;
+      const updated = { ...s, everPositioned: true };
+      saveWidgetSettings(updated);
+      return updated;
+    });
+  }
+
+  // 조정 모드를 끝내고 바탕화면에 고정한다 (헤더 "여기 고정" 버튼).
+  function finishAdjust() {
+    stampPositioned();
+    setAdjustMode(false);
+  }
+
   // 트레이의 "위젯 위치/크기 조정" 메뉴가 이 이벤트를 보낸다. 누를 때마다 토글.
   useEffect(() => {
     const unlisten = listen("widget:toggle-adjust", () => {
       setAdjustMode((prev) => {
-        const next = !prev;
-        // 조정을 끝내는 순간 "위치를 잡았다"고 기록 → 다음 실행부터는 고정으로 시작.
-        if (!next) {
-          setSettings((s) => {
-            if (s.everPositioned) return s;
-            const updated = { ...s, everPositioned: true };
-            saveWidgetSettings(updated);
-            return updated;
-          });
-        }
-        return next;
+        if (prev) stampPositioned();
+        return !prev;
       });
     });
     return () => {
@@ -176,11 +183,18 @@ export function WidgetView() {
             {adjustMode && (
               <div
                 data-tauri-drag-region
-                className="mb-1 flex shrink-0 cursor-move items-center justify-center rounded-md bg-primary px-2 py-1 text-center text-xs font-medium text-primary-foreground"
+                className="mb-1 flex shrink-0 cursor-move items-center justify-between gap-2 rounded-md bg-primary px-2 py-1 text-xs font-medium text-primary-foreground"
               >
-                <span data-tauri-drag-region>
-                  위치·크기 조정 중 — 드래그해서 이동, 트레이에서 다시 눌러 고정
+                <span data-tauri-drag-region className="min-w-0 flex-1 text-center">
+                  위치·크기 조정 중 — 드래그해서 이동
                 </span>
+                <button
+                  type="button"
+                  onClick={finishAdjust}
+                  className="shrink-0 rounded bg-primary-foreground/20 px-2 py-0.5 font-medium hover:bg-primary-foreground/30"
+                >
+                  ✓ 여기 고정
+                </button>
               </div>
             )}
 
