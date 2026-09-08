@@ -4,7 +4,7 @@ import { immer } from "zustand/middleware/immer";
 import { loadBoard, saveBoard } from "@/lib/boardStorage";
 import { notifyBoardChanged, subscribeBoardChanges } from "@/lib/boardSync";
 import { createId } from "@/lib/id";
-import type { Board, Card, Column } from "@/types";
+import type { Board, Card, Column, ColumnSort } from "@/types";
 
 // 카드 생성 시 넘길 수 있는 초기 필드. 빠른 추가는 title(+dueDate)만, 상세 추가는 전부 채운다.
 export type NewCardInput = Partial<
@@ -89,6 +89,8 @@ interface BoardState {
   removeColumn: (columnId: string) => void;
   // '완료'로 취급할 컬럼을 지정/해제한다. 지정 시 그 컬럼의 카드에 완료 시각을 소급한다.
   setDoneColumn: (columnId: string | null) => void;
+  // 컬럼의 정렬 방식을 설정한다 (null이면 manual로 되돌림). 화면 표시만 바뀐다.
+  setColumnSort: (columnId: string, sort: ColumnSort | null) => void;
 
   // 새 카드를 만들고 그 id를 반환한다.
   addCard: (columnId: string, input: NewCardInput) => string;
@@ -167,6 +169,12 @@ export const useBoardStore = create<BoardState>()(
           const card = state.board.cards[cardId];
           if (card && !card.completedAt) card.completedAt = now;
         }
+      }),
+
+    setColumnSort: (columnId, sort) =>
+      set((state) => {
+        const column = state.board?.columns.find((c) => c.id === columnId);
+        if (column) column.sort = sort ?? undefined;
       }),
 
     addCard: (columnId, input) => {

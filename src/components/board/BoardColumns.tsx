@@ -105,7 +105,14 @@ export function BoardColumns({
       overId,
       over.data.current?.type as string | undefined,
     );
-    if (target) moveCard(activeId, target.columnId, target.index);
+    if (!target) return;
+    // 정렬이 켜진 컬럼에서는 같은 컬럼 내 수동 재배치를 무시한다 (표시가 정렬을 따르므로).
+    const fromColumnId = findColumnIdOfCard(board, activeId);
+    if (fromColumnId === target.columnId) {
+      const col = board.columns.find((c) => c.id === target.columnId);
+      if (col?.sort && col.sort.by !== "manual") return;
+    }
+    moveCard(activeId, target.columnId, target.index);
   }
 
   return (

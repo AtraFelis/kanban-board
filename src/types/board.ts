@@ -28,11 +28,20 @@ export interface Card {
   color?: string;
 }
 
+// 컬럼의 카드 정렬 방식. manual(= cardIds 순서, 기본)이 아니면 화면 표시만 정렬한다
+// (cardIds 자체는 재배열하지 않음).
+export interface ColumnSort {
+  by: "manual" | "createdAt" | "dueDate" | "label";
+  dir: "asc" | "desc";
+}
+
 // 컬럼 한 개. 카드를 id 배열로 참조하며 이 배열 순서가 곧 표시 순서다.
 export interface Column {
   id: string;
   title: string;
   cardIds: string[];
+  /** 정렬 방식. 없으면 manual. */
+  sort?: ColumnSort;
 }
 
 // 보드 한 개. 1차 버전은 단일 보드만 사용한다.

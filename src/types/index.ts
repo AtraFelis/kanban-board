@@ -1,1 +1,7 @@
-export type { Board, Column, Card, ChecklistItem } from "./board";
+export type {
+  Board,
+  Column,
+  ColumnSort,
+  Card,
+  ChecklistItem,
+} from "./board";

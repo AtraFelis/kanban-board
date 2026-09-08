@@ -9,6 +9,7 @@ import { ask } from "@tauri-apps/plugin-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { friendlyDateLabel, todayISODate, toISODate } from "@/lib/date";
+import { sortCards, sortSummary } from "@/lib/sortCards";
 import { useBoardStore } from "@/store/boardStore";
 import type { Card, Column } from "@/types";
 
@@ -65,7 +66,12 @@ export function ColumnView({
   const removeColumn = useBoardStore((s) => s.removeColumn);
   const doneColumnId = useBoardStore((s) => s.board?.doneColumnId);
   const setDoneColumn = useBoardStore((s) => s.setDoneColumn);
+  const setColumnSort = useBoardStore((s) => s.setColumnSort);
   const isDone = column.id === doneColumnId;
+
+  // 정렬은 화면 표시만 바꾼다. cardIds 원본 순서는 그대로.
+  const sortedCards = sortCards(cards, column.sort);
+  const sortLabel = sortSummary(column.sort);
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(column.title);
@@ -109,6 +115,8 @@ export function ColumnView({
       extraItems={columnMenuExtra}
       isDone={isDone}
       onSetDone={() => setDoneColumn(isDone ? null : column.id)}
+      sort={column.sort}
+      onSetSort={(s) => setColumnSort(column.id, s)}
       onAddCard={() => onOpenCreate(column.id)}
       onRename={startRename}
       onDelete={confirmDelete}
@@ -157,6 +165,17 @@ export function ColumnView({
         </Button>
       </div>
 
+      {sortLabel && (
+        <button
+          type="button"
+          onClick={() => setColumnSort(column.id, null)}
+          title="정렬 해제"
+          className="-mt-1 self-start rounded px-1 text-[11px] text-muted-foreground hover:bg-accent hover:text-foreground"
+        >
+          정렬: {sortLabel} ✕
+        </button>
+      )}
+
       <div
         ref={setNodeRef}
         onDoubleClick={(e) => {
@@ -168,8 +187,11 @@ export function ColumnView({
       >
         {isDone ? (
           <>
-            {dateGroups(cards).map((g) => {
+            {dateGroups(sortedCards).map((g) => {
               const collapsed = collapsedGroups[g.key] ?? g.defaultCollapsed;
+              const groupCards = sortedCards.filter((card) =>
+                g.cardIds.includes(card.id),
+              );
               return (
                 <CardGroup
                   key={g.key}
@@ -185,15 +207,13 @@ export function ColumnView({
                     strategy={verticalListSortingStrategy}
                   >
                     {!collapsed &&
-                      cards
-                        .filter((card) => g.cardIds.includes(card.id))
-                        .map((card) => (
-                          <SortableCard
-                            key={card.id}
-                            card={card}
-                            onOpen={onOpenCard}
-                          />
-                        ))}
+                      groupCards.map((card) => (
+                        <SortableCard
+                          key={card.id}
+                          card={card}
+                          onOpen={onOpenCard}
+                        />
+                      ))}
                   </SortableContext>
                 </CardGroup>
               );
@@ -207,10 +227,10 @@ export function ColumnView({
         ) : (
           <>
             <SortableContext
-              items={column.cardIds}
+              items={sortedCards.map((c) => c.id)}
               strategy={verticalListSortingStrategy}
             >
-              {cards.map((card) => (
+              {sortedCards.map((card) => (
                 <SortableCard key={card.id} card={card} onOpen={onOpenCard} />
               ))}
             </SortableContext>
