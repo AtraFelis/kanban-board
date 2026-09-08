@@ -126,8 +126,17 @@ export function BoardColumns({
     if (!fromColumnId || !target) return;
 
     const sameColumn = fromColumnId === target.columnId;
-    // 완료 컬럼에서 다른 컬럼으로: 드롭 확정 때 확인받으므로 미리보기 이동은 생략.
-    if (!sameColumn && fromColumnId === board.doneColumnId) return;
+    // 완료 컬럼이 얽힌 이동은 미리보기(실시간 이동)를 하지 않고 드롭 확정 때만 처리한다.
+    // - 완료에서 빼는 중: 드롭 때 경고 팝업을 띄우려고
+    // - 완료로 넣는 중: 드래그하며 잠깐 지나가는 것만으로 completedAt이 찍히고, 다른 데
+    //   떨궜을 때 "완료 취소" 경고가 잘못 뜨는 버그를 막으려고
+    if (
+      !sameColumn &&
+      (fromColumnId === board.doneColumnId ||
+        target.columnId === board.doneColumnId)
+    ) {
+      return;
+    }
 
     if (sameColumn) {
       // 같은 컬럼: 섹션/카드 위에서 섹션이 바뀔 때만 실시간 반영. 컬럼 빈 영역 hover나
