@@ -140,11 +140,11 @@ interface Column { /* ... */ sort?: ColumnSort; }  // 없으면 manual
 - `CardContextMenu`에 "보관" 항목 — 완료 컬럼 카드일 때만 (스토어에서 소속 컬럼 확인).
 - 완료 컬럼 날짜 그룹 헤더(`CardGroup` `headerExtra`)에 "이 날짜 전체 보관" 버튼
   → `archiveCards(group.cardIds)` (확인 팝업).
-- `BoardHeader` `⋯` 메뉴에 "보관함" → `ArchivePanel`(신규, Dialog):
+- `BoardHeader` `⋯` 메뉴 + 위젯 우클릭 메뉴에 "보관함" → `ArchivePanel`(신규, Dialog):
   - `archivedAt` 역순 리스트. 제목/태그 부분일치 검색.
   - 행마다 제목·완료일·태그 + [복원] [영구삭제(`ConfirmDialog`)].
   - 하단: "완료 후 [N]일 지나면 자동 보관" 숫자 입력(0 = 끔) + "지금 정리" 버튼(`sweepAutoArchive`).
-- 위젯에서는 보관함 패널 없음 (풀보드 전용). "보관" 액션 자체는 공유 메뉴라 위젯에서도 뜸(무해).
+- 보관함 패널은 풀보드(`BoardHeader ⋯`) + 위젯(우클릭 설정 메뉴) 양쪽에서 연다.
 
 **검증**: 수동 보관 → 카드가 완료에서 사라지고 보관함에 뜸. 날짜 그룹 통째 보관.
 복원 → 완료 컬럼 맨 아래, 날짜 그룹 재형성. 영구삭제 확인. 자동 보관: `autoArchiveDays`

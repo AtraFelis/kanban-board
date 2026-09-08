@@ -10,8 +10,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { toISODate } from "@/lib/date";
 import { useBoardStore } from "@/store/boardStore";
+import type { Card } from "@/types";
 
 import { ConfirmDialog } from "./ConfirmDialog";
+
+// 셀렉터가 매 렌더 새 배열을 반환하면 무한 루프가 나므로 고정 참조를 쓴다.
+const NO_CARDS: Card[] = [];
 
 interface ArchivePanelProps {
   open: boolean;
@@ -20,7 +24,7 @@ interface ArchivePanelProps {
 
 // 보드 밖으로 치운 완료 카드 목록. 검색 / 복원 / 영구 삭제 / 자동 보관 설정.
 export function ArchivePanel({ open, onClose }: ArchivePanelProps) {
-  const archived = useBoardStore((s) => s.board?.archivedCards ?? []);
+  const archived = useBoardStore((s) => s.board?.archivedCards ?? NO_CARDS);
   const autoDays = useBoardStore((s) => s.board?.autoArchiveDays ?? 0);
   const restoreCard = useBoardStore((s) => s.restoreCard);
   const deleteArchivedCard = useBoardStore((s) => s.deleteArchivedCard);
