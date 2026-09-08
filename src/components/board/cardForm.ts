@@ -1,6 +1,9 @@
 import { isoFromLocalDate, toISODate } from "@/lib/date";
 import { type Card, type ChecklistItem } from "@/types";
 
+// 카드 제목 최대 길이. 입력창 maxLength + 저장 시 방어적으로 자른다.
+export const CARD_TITLE_MAX = 120;
+
 // 카드 생성·편집 폼이 공유하는 값 모양. 날짜/설명/색은 "" = 미지정.
 export interface CardFormValue {
   title: string;
@@ -44,7 +47,7 @@ export function cardToForm(card: Card): CardFormValue {
 // 스토어의 addCard(NewCardInput) / updateCard(CardPatch)에 넘길 수 있는 모양으로 정규화.
 export function cardFormToInput(form: CardFormValue) {
   return {
-    title: form.title.trim(),
+    title: form.title.trim().slice(0, CARD_TITLE_MAX),
     description: form.description.trim() || undefined,
     dueDate: form.dueDate || undefined,
     createdAt: form.createdAt ? isoFromLocalDate(form.createdAt) : undefined,

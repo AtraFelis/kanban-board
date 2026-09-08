@@ -181,7 +181,7 @@ export function ColumnView({
         ) : (
           <button
             type="button"
-            className="flex-1 rounded px-1 py-0.5 text-left text-sm font-semibold hover:bg-accent"
+            className="min-w-0 flex-1 rounded px-1 py-0.5 text-left text-sm font-semibold break-words hover:bg-accent"
             onClick={startRename}
           >
             {column.title}
