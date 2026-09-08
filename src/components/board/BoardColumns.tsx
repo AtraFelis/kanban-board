@@ -83,6 +83,8 @@ interface BoardColumnsProps {
   columnClassName?: string;
   // 컬럼 우클릭 메뉴에 덧붙일 항목 (위젯이 위젯 설정을 넣는다).
   columnMenuExtra?: React.ReactNode;
+  // 컬럼 하단 빠른 추가 바 (풀보드 전용).
+  quickAdd?: boolean;
 }
 
 // 컬럼 그리드 + 카드 드래그 앤 드롭. 풀보드와 위젯이 공유한다.
@@ -92,6 +94,7 @@ export function BoardColumns({
   onOpenCreate,
   columnClassName,
   columnMenuExtra,
+  quickAdd,
 }: BoardColumnsProps) {
   const moveCard = useBoardStore((s) => s.moveCard);
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
@@ -272,6 +275,7 @@ export function BoardColumns({
               className={columnClassName}
               columnMenuExtra={columnMenuExtra}
               isDragging={activeCardId !== null}
+              quickAdd={quickAdd}
             />
           );
         })}
