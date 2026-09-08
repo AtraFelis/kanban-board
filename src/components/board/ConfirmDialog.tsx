@@ -1,3 +1,5 @@
+import { useRef } from "react";
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -28,6 +30,8 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const confirmRef = useRef<HTMLButtonElement>(null);
+
   return (
     <Dialog
       open={open}
@@ -39,6 +43,18 @@ export function ConfirmDialog({
         className="max-w-xs"
         // 확인/취소는 명시적으로 눌러야 한다. 바깥 클릭(드래그 직후 pointerup 등)으로 닫지 않는다.
         onInteractOutside={(e) => e.preventDefault()}
+        // 열리면 확인 버튼에 포커스 (버튼에 포커스 링 표시 + Space/클릭 동작).
+        onOpenAutoFocus={(e) => {
+          e.preventDefault();
+          confirmRef.current?.focus();
+        }}
+        // 포커스 위치와 무관하게 Enter는 항상 '확인'으로 처리한다.
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+            e.preventDefault();
+            onConfirm();
+          }
+        }}
       >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
@@ -53,6 +69,7 @@ export function ConfirmDialog({
             {cancelLabel}
           </Button>
           <Button
+            ref={confirmRef}
             type="button"
             variant={destructive ? "destructive" : "default"}
             size="sm"

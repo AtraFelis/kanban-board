@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow, Window } from "@tauri-apps/api/window";
 
+import { ArchivePanel } from "@/components/board/ArchivePanel";
 import { BoardColumns } from "@/components/board/BoardColumns";
 import { CardCreateDialog } from "@/components/board/CardCreateDialog";
 import { CardDetailDialog } from "@/components/board/CardDetailDialog";
@@ -66,6 +67,7 @@ export function WidgetView() {
   const [createColumnId, setCreateColumnId] = useState<string | null>(null);
   const [autostart, setAutostartState] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
   const [settings, setSettings] = useState<WidgetSettings>(getWidgetSettings);
   // 첫 실행(위치를 한 번도 안 잡음)이면 조정 모드로 시작해 사용자가 자리잡게 한다.
   const [adjustMode, setAdjustMode] = useState(!settings.everPositioned);
@@ -135,6 +137,9 @@ export function WidgetView() {
         모양 설정…
       </ContextMenuItem>
       <ContextMenuSeparator />
+      <ContextMenuItem onSelect={() => setArchiveOpen(true)}>
+        보관함
+      </ContextMenuItem>
       <ContextMenuItem
         onSelect={() => {
           if (board) void exportBoardToFile(board);
@@ -206,6 +211,10 @@ export function WidgetView() {
         onClose={() => setSettingsOpen(false)}
         settings={settings}
         onChange={updateSettings}
+      />
+      <ArchivePanel
+        open={archiveOpen}
+        onClose={() => setArchiveOpen(false)}
       />
     </>
   );

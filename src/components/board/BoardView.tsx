@@ -36,6 +36,7 @@ export function BoardView() {
         board={board}
         onOpenCard={setOpenCardId}
         onOpenCreate={setCreateColumnId}
+        quickAdd
       />
 
       <CardDetailDialog

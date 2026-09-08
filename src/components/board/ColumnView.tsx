@@ -22,6 +22,7 @@ import type { Card, Column } from "@/types";
 import { CardGroup } from "./CardGroup";
 import { ColumnContextMenu } from "./ColumnContextMenu";
 import { ColumnSectionGroup } from "./ColumnSectionGroup";
+import { ConfirmDialog } from "./ConfirmDialog";
 import { SortableCard } from "./SortableCard";
 
 // '미분류' 그룹의 접힘 상태를 collapsedGroups 맵에 넣을 때 쓰는 키.
@@ -36,6 +37,8 @@ interface ColumnViewProps {
   columnMenuExtra?: React.ReactNode;
   // 카드를 드래그하는 중인지. 드래그 중에는 빈 '미분류' 그룹도 드롭 대상으로 보여준다.
   isDragging?: boolean;
+  // 컬럼 하단에 제목만 입력하는 빠른 추가 바를 보여준다 (풀보드 전용).
+  quickAdd?: boolean;
 }
 
 interface DateGroup {
@@ -74,14 +77,17 @@ export function ColumnView({
   className,
   columnMenuExtra,
   isDragging,
+  quickAdd,
 }: ColumnViewProps) {
   const renameColumn = useBoardStore((s) => s.renameColumn);
   const removeColumn = useBoardStore((s) => s.removeColumn);
+  const addCard = useBoardStore((s) => s.addCard);
   const doneColumnId = useBoardStore((s) => s.board?.doneColumnId);
   const setDoneColumn = useBoardStore((s) => s.setDoneColumn);
   const setColumnSort = useBoardStore((s) => s.setColumnSort);
   const addSection = useBoardStore((s) => s.addSection);
   const toggleSectionCollapsed = useBoardStore((s) => s.toggleSectionCollapsed);
+  const archiveCards = useBoardStore((s) => s.archiveCards);
   const isDone = column.id === doneColumnId;
 
   // 정렬은 화면 표시만 바꾼다. cardIds 원본 순서는 그대로.
@@ -101,6 +107,12 @@ export function ColumnView({
   const [titleDraft, setTitleDraft] = useState(column.title);
   const [addSectionOpen, setAddSectionOpen] = useState(false);
   const [sectionDraft, setSectionDraft] = useState("");
+  const [quickAddDraft, setQuickAddDraft] = useState("");
+  // 완료 날짜 그룹 "전체 보관" 확인 대상.
+  const [pendingArchive, setPendingArchive] = useState<{
+    label: string;
+    cardIds: string[];
+  } | null>(null);
   // 완료 날짜 그룹 / '미분류' 그룹의 접힘 상태. 영속화하지 않는다.
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(
     {},
@@ -134,6 +146,15 @@ export function ColumnView({
     addSection(column.id, name);
     setSectionDraft("");
     setAddSectionOpen(false);
+  }
+
+  function submitQuickAdd(e: React.FormEvent) {
+    e.preventDefault();
+    const title = quickAddDraft.trim();
+    if (!title) return;
+    // 연속 입력을 위해 포커스는 그대로 두고 값만 비운다.
+    addCard(column.id, { title });
+    setQuickAddDraft("");
   }
 
   async function confirmDelete() {
@@ -253,6 +274,21 @@ export function ColumnView({
                   onToggle={() =>
                     setCollapsedGroups((c) => ({ ...c, [g.key]: !collapsed }))
                   }
+                  headerExtra={
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPendingArchive({
+                          label: g.label,
+                          cardIds: g.cardIds,
+                        })
+                      }
+                      title="이 날짜의 완료 카드를 모두 보관함으로"
+                      className="rounded px-1 text-[11px] font-normal text-muted-foreground hover:bg-accent hover:text-foreground"
+                    >
+                      전체 보관
+                    </button>
+                  }
                 >
                   <SortableContext
                     items={collapsed ? [] : g.cardIds}
@@ -325,6 +361,17 @@ export function ColumnView({
           </>
         )}
       </div>
+
+      {quickAdd && (
+        <form onSubmit={submitQuickAdd} className="shrink-0 pt-0.5">
+          <Input
+            value={quickAddDraft}
+            onChange={(e) => setQuickAddDraft(e.target.value)}
+            placeholder="+ 빠른 추가 (Enter)"
+            className="h-7 text-xs"
+          />
+        </form>
+      )}
     </ColumnContextMenu>
 
       <Dialog open={addSectionOpen} onOpenChange={setAddSectionOpen}>
@@ -345,6 +392,22 @@ export function ColumnView({
           </form>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={pendingArchive !== null}
+        title="날짜 그룹 보관"
+        description={
+          pendingArchive
+            ? `"${pendingArchive.label}"의 완료 카드 ${pendingArchive.cardIds.length}개를 보관함으로 옮깁니다.`
+            : ""
+        }
+        confirmLabel="보관"
+        onConfirm={() => {
+          if (pendingArchive) archiveCards(pendingArchive.cardIds);
+          setPendingArchive(null);
+        }}
+        onCancel={() => setPendingArchive(null)}
+      />
     </>
   );
 }

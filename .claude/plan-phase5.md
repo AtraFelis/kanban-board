@@ -111,12 +111,45 @@ interface Column { /* ... */ sort?: ColumnSort; }  // 없으면 manual
 - **태그 자동완성**: `src/lib/labels.ts` `allLabels(board): string[]`(distinct+정렬).
   `CardFields` 라벨 입력에 `<datalist>` 연결(`<input list="card-labels">`). 네이티브, 의존성 0.
 
-## 5-6. 완료 카드 보관함 (스펙만 — 별도 논의)
+## 5-6. 완료 카드 보관함
 
-사용자: "삭제 말고 다른 곳에 보관하고 싶다. 조금 더 고민." → 이번 구현 제외.
-갈래: (a) `Board.archive` + 보관 액션 + 보관함 패널(검색·복원·영구삭제, `boardIO`에 포함),
-(b) 날짜 그룹 헤더 "이 날짜 전체 보관", (c) N일 지난 완료 카드 자동 보관.
-결정 후 이 문서에 5-6으로 채운다.
+완료 카드가 쌓이면 삭제 말고 보드 밖으로 치워두되 다시 볼 수 있게.
+결정: **수동 + 자동(N일) 둘 다**, **카드 하나씩 + 날짜 그룹 통째 둘 다**,
+복원은 **완료 컬럼 맨 아래로**.
+
+**타입** (`src/types/board.ts`):
+- `Card.archivedAt?: string` (ISO). `completedAt`은 보관 후에도 유지.
+- `Board.archivedCards?: Card[]` (migrate가 없으면 `[]`로).
+- `Board.autoArchiveDays?: number` (undefined/0 = 자동 보관 끔).
+
+**스토어** (`src/store/boardStore.ts`):
+- `archiveCard(cardId)` / `archiveCards(cardIds: string[])` — 완료 컬럼 카드에 한해,
+  `board.cards`·컬럼 `cardIds`에서 빼서 `archivedCards`로. `archivedAt = now`.
+- `restoreCard(cardId)` — `archivedCards`에서 빼서 `doneColumnId` 컬럼(없으면 `columns[0]`)
+  맨 아래로. `archivedAt` 제거. `completedAt` 유지.
+- `deleteArchivedCard(cardId)` — 영구 삭제.
+- `setAutoArchiveDays(days: number | null)`.
+- `sweepAutoArchive()` — `autoArchiveDays`가 있으면 완료 컬럼에서 `completedAt`이
+  N일보다 오래된 카드를 전부 `archiveCards`. `init` 직후 1회 호출 + 보관함 패널에서 수동 실행.
+- `migrate`: `archivedCards ??= []`.
+
+**boardIO** (`src/lib/boardIO.ts`): `isBoard()`에 `archivedCards`(있으면 배열) 허용.
+내보내기/가져오기가 `archivedCards`·`autoArchiveDays` 왕복.
+
+**UI**:
+- `CardContextMenu`에 "보관" 항목 — 완료 컬럼 카드일 때만 (스토어에서 소속 컬럼 확인).
+- 완료 컬럼 날짜 그룹 헤더(`CardGroup` `headerExtra`)에 "이 날짜 전체 보관" 버튼
+  → `archiveCards(group.cardIds)` (확인 팝업).
+- `BoardHeader` `⋯` 메뉴 + 위젯 우클릭 메뉴에 "보관함" → `ArchivePanel`(신규, Dialog):
+  - `archivedAt` 역순 리스트. 제목/태그 부분일치 검색.
+  - 행마다 제목·완료일·태그 + [복원] [영구삭제(`ConfirmDialog`)].
+  - 하단: "완료 후 [N]일 지나면 자동 보관" 숫자 입력(0 = 끔) + "지금 정리" 버튼(`sweepAutoArchive`).
+- 보관함 패널은 풀보드(`BoardHeader ⋯`) + 위젯(우클릭 설정 메뉴) 양쪽에서 연다.
+
+**검증**: 수동 보관 → 카드가 완료에서 사라지고 보관함에 뜸. 날짜 그룹 통째 보관.
+복원 → 완료 컬럼 맨 아래, 날짜 그룹 재형성. 영구삭제 확인. 자동 보관: `autoArchiveDays`
+설정 후 과거 `completedAt` 카드 심고 새로고침 → 자동으로 보관됨. 내보내기/가져오기 왕복.
+창 간 동기화.
 
 ---
 

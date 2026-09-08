@@ -26,6 +26,8 @@ export interface Card {
   completedAt?: string;
   /** 소속 카테고리 섹션 id (같은 컬럼의 Column.sections 참조). 없으면 '미분류'. */
   sectionId?: string;
+  /** 보관함으로 옮긴 시각 (ISO 8601). 보관된 카드는 board.archivedCards에만 있다. */
+  archivedAt?: string;
   /** 카드 개별 배경색 (CSS 색 문자열). 없으면 기본색. */
   color?: string;
 }
@@ -65,4 +67,8 @@ export interface Board {
   cards: Record<string, Card>;
   /** '완료'로 취급할 컬럼 id. 미지정 시 migrate가 제목이 "완료"인 컬럼을 찾아 채운다. */
   doneColumnId?: string;
+  /** 보드 밖으로 치운 완료 카드들. migrate가 없으면 []로 채운다. */
+  archivedCards?: Card[];
+  /** 완료 후 이 일수가 지나면 자동으로 보관함으로. undefined/0이면 자동 보관 끔. */
+  autoArchiveDays?: number;
 }
