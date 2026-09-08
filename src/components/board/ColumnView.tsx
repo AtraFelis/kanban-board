@@ -22,6 +22,7 @@ import type { Card, Column } from "@/types";
 import { CardGroup } from "./CardGroup";
 import { ColumnContextMenu } from "./ColumnContextMenu";
 import { ColumnSectionGroup } from "./ColumnSectionGroup";
+import { ConfirmDialog } from "./ConfirmDialog";
 import { SortableCard } from "./SortableCard";
 
 // '미분류' 그룹의 접힘 상태를 collapsedGroups 맵에 넣을 때 쓰는 키.
@@ -82,6 +83,7 @@ export function ColumnView({
   const setColumnSort = useBoardStore((s) => s.setColumnSort);
   const addSection = useBoardStore((s) => s.addSection);
   const toggleSectionCollapsed = useBoardStore((s) => s.toggleSectionCollapsed);
+  const archiveCards = useBoardStore((s) => s.archiveCards);
   const isDone = column.id === doneColumnId;
 
   // 정렬은 화면 표시만 바꾼다. cardIds 원본 순서는 그대로.
@@ -101,6 +103,11 @@ export function ColumnView({
   const [titleDraft, setTitleDraft] = useState(column.title);
   const [addSectionOpen, setAddSectionOpen] = useState(false);
   const [sectionDraft, setSectionDraft] = useState("");
+  // 완료 날짜 그룹 "전체 보관" 확인 대상.
+  const [pendingArchive, setPendingArchive] = useState<{
+    label: string;
+    cardIds: string[];
+  } | null>(null);
   // 완료 날짜 그룹 / '미분류' 그룹의 접힘 상태. 영속화하지 않는다.
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(
     {},
@@ -253,6 +260,21 @@ export function ColumnView({
                   onToggle={() =>
                     setCollapsedGroups((c) => ({ ...c, [g.key]: !collapsed }))
                   }
+                  headerExtra={
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPendingArchive({
+                          label: g.label,
+                          cardIds: g.cardIds,
+                        })
+                      }
+                      title="이 날짜의 완료 카드를 모두 보관함으로"
+                      className="rounded px-1 text-[11px] font-normal text-muted-foreground hover:bg-accent hover:text-foreground"
+                    >
+                      전체 보관
+                    </button>
+                  }
                 >
                   <SortableContext
                     items={collapsed ? [] : g.cardIds}
@@ -345,6 +367,22 @@ export function ColumnView({
           </form>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={pendingArchive !== null}
+        title="날짜 그룹 보관"
+        description={
+          pendingArchive
+            ? `"${pendingArchive.label}"의 완료 카드 ${pendingArchive.cardIds.length}개를 보관함으로 옮깁니다.`
+            : ""
+        }
+        confirmLabel="보관"
+        onConfirm={() => {
+          if (pendingArchive) archiveCards(pendingArchive.cardIds);
+          setPendingArchive(null);
+        }}
+        onCancel={() => setPendingArchive(null)}
+      />
     </>
   );
 }

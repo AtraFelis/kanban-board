@@ -24,13 +24,16 @@ interface CardContextMenuProps {
 // 카드 우클릭 메뉴: 수정 / 이동(다른 컬럼) / 삭제(확인 후).
 export function CardContextMenu({ card, onOpen, children }: CardContextMenuProps) {
   const columns = useBoardStore((s) => s.board?.columns);
+  const doneColumnId = useBoardStore((s) => s.board?.doneColumnId);
   const moveCard = useBoardStore((s) => s.moveCard);
+  const archiveCard = useBoardStore((s) => s.archiveCard);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const currentColumnId = columns?.find((c) =>
     c.cardIds.includes(card.id),
   )?.id;
   const moveTargets = (columns ?? []).filter((c) => c.id !== currentColumnId);
+  const isInDoneColumn = !!doneColumnId && currentColumnId === doneColumnId;
 
   return (
     <>
@@ -59,6 +62,12 @@ export function CardContextMenu({ card, onOpen, children }: CardContextMenuProps
                 ))}
               </ContextMenuSubContent>
             </ContextMenuSub>
+          )}
+
+          {isInDoneColumn && (
+            <ContextMenuItem onSelect={() => archiveCard(card.id)}>
+              보관
+            </ContextMenuItem>
           )}
 
           <ContextMenuSeparator />
