@@ -114,11 +114,13 @@ interface BoardState {
   // 카드를 toColumnId의 toIndex 위치로 옮긴다. 같은 컬럼 내 순서 변경도 이 함수로 처리.
   // opts.sectionId: string → 그 섹션으로, null → 미분류로. 생략 시 같은 컬럼이면 유지,
   // 다른 컬럼이면 미분류로 초기화한다.
+  // opts.skipCompletion: 드래그 중 미리보기 이동처럼, 완료 컬럼 진입/이탈에 따른
+  // completedAt 자동 갱신을 하지 않는다.
   moveCard: (
     cardId: string,
     toColumnId: string,
     toIndex: number,
-    opts?: { sectionId?: string | null },
+    opts?: { sectionId?: string | null; skipCompletion?: boolean },
   ) => void;
 }
 
@@ -323,11 +325,14 @@ export const useBoardStore = create<BoardState>()(
           }
 
           // '완료' 컬럼에 들어오면 완료 시각을 찍고, 밖으로 나가면 지운다.
-          const doneId = state.board.doneColumnId;
-          if (doneId && toColumn.id === doneId) {
-            if (!card.completedAt) card.completedAt = new Date().toISOString();
-          } else if (card.completedAt) {
-            delete card.completedAt;
+          // (드래그 미리보기 이동에서는 skipCompletion으로 건너뛴다.)
+          if (!opts?.skipCompletion) {
+            const doneId = state.board.doneColumnId;
+            if (doneId && toColumn.id === doneId) {
+              if (!card.completedAt) card.completedAt = new Date().toISOString();
+            } else if (card.completedAt) {
+              delete card.completedAt;
+            }
           }
         }
       }),

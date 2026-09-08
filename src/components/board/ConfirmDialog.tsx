@@ -35,7 +35,11 @@ export function ConfirmDialog({
         if (!next) onCancel();
       }}
     >
-      <DialogContent className="max-w-xs">
+      <DialogContent
+        className="max-w-xs"
+        // 확인/취소는 명시적으로 눌러야 한다. 바깥 클릭(드래그 직후 pointerup 등)으로 닫지 않는다.
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
