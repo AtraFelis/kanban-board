@@ -10,7 +10,13 @@ import type { Board, Card, Column, ColumnSort } from "@/types";
 export type NewCardInput = Partial<
   Pick<
     Card,
-    "description" | "dueDate" | "labels" | "checklist" | "color" | "createdAt"
+    | "description"
+    | "dueDate"
+    | "labels"
+    | "checklist"
+    | "color"
+    | "createdAt"
+    | "sectionId"
   >
 > & {
   title: string;
@@ -94,12 +100,28 @@ interface BoardState {
   // 컬럼의 정렬 방식을 설정한다 (null이면 manual로 되돌림). 화면 표시만 바뀐다.
   setColumnSort: (columnId: string, sort: ColumnSort | null) => void;
 
+  // 컬럼 카테고리 섹션. addSection은 만든 섹션 id를 반환한다.
+  addSection: (columnId: string, title: string) => string;
+  renameSection: (columnId: string, sectionId: string, title: string) => void;
+  // 섹션만 제거하고, 그 섹션의 카드는 '미분류'로 남긴다 (카드는 삭제하지 않음).
+  removeSection: (columnId: string, sectionId: string) => void;
+  toggleSectionCollapsed: (columnId: string, sectionId: string) => void;
+
   // 새 카드를 만들고 그 id를 반환한다.
   addCard: (columnId: string, input: NewCardInput) => string;
   updateCard: (cardId: string, patch: CardPatch) => void;
   removeCard: (cardId: string) => void;
   // 카드를 toColumnId의 toIndex 위치로 옮긴다. 같은 컬럼 내 순서 변경도 이 함수로 처리.
-  moveCard: (cardId: string, toColumnId: string, toIndex: number) => void;
+  // opts.sectionId: string → 그 섹션으로, null → 미분류로. 생략 시 같은 컬럼이면 유지,
+  // 다른 컬럼이면 미분류로 초기화한다.
+  // opts.skipCompletion: 드래그 중 미리보기 이동처럼, 완료 컬럼 진입/이탈에 따른
+  // completedAt 자동 갱신을 하지 않는다.
+  moveCard: (
+    cardId: string,
+    toColumnId: string,
+    toIndex: number,
+    opts?: { sectionId?: string | null; skipCompletion?: boolean },
+  ) => void;
 }
 
 export const useBoardStore = create<BoardState>()(
@@ -179,6 +201,45 @@ export const useBoardStore = create<BoardState>()(
         if (column) column.sort = sort ?? undefined;
       }),
 
+    addSection: (columnId, title) => {
+      const id = createId();
+      set((state) => {
+        const column = state.board?.columns.find((c) => c.id === columnId);
+        if (!column) return;
+        if (!column.sections) column.sections = [];
+        column.sections.push({ id, title });
+      });
+      return id;
+    },
+
+    renameSection: (columnId, sectionId, title) =>
+      set((state) => {
+        const section = state.board?.columns
+          .find((c) => c.id === columnId)
+          ?.sections?.find((s) => s.id === sectionId);
+        if (section) section.title = title;
+      }),
+
+    removeSection: (columnId, sectionId) =>
+      set((state) => {
+        const board = state.board;
+        const column = board?.columns.find((c) => c.id === columnId);
+        if (!board || !column?.sections) return;
+        column.sections = column.sections.filter((s) => s.id !== sectionId);
+        for (const cardId of column.cardIds) {
+          const card = board.cards[cardId];
+          if (card?.sectionId === sectionId) delete card.sectionId;
+        }
+      }),
+
+    toggleSectionCollapsed: (columnId, sectionId) =>
+      set((state) => {
+        const section = state.board?.columns
+          .find((c) => c.id === columnId)
+          ?.sections?.find((s) => s.id === sectionId);
+        if (section) section.collapsed = !section.collapsed;
+      }),
+
     addCard: (columnId, input) => {
       const id = createId();
       set((state) => {
@@ -192,6 +253,7 @@ export const useBoardStore = create<BoardState>()(
           dueDate: input.dueDate || undefined,
           labels: input.labels ?? [],
           checklist: input.checklist ?? [],
+          sectionId: input.sectionId || undefined,
           color: input.color || undefined,
           order: column.cardIds.length,
           createdAt: input.createdAt || new Date().toISOString(),
@@ -228,7 +290,7 @@ export const useBoardStore = create<BoardState>()(
         }
       }),
 
-    moveCard: (cardId, toColumnId, toIndex) =>
+    moveCard: (cardId, toColumnId, toIndex, opts) =>
       set((state) => {
         if (!state.board) return;
         const fromColumn = state.board.columns.find((c) =>
@@ -236,22 +298,41 @@ export const useBoardStore = create<BoardState>()(
         );
         const toColumn = state.board.columns.find((c) => c.id === toColumnId);
         if (!fromColumn || !toColumn) return;
+        const sameColumn = fromColumn.id === toColumn.id;
 
         fromColumn.cardIds = fromColumn.cardIds.filter((id) => id !== cardId);
         const clampedIndex = Math.max(0, Math.min(toIndex, toColumn.cardIds.length));
         toColumn.cardIds.splice(clampedIndex, 0, cardId);
 
         renumber(state.board, fromColumn.id);
-        if (fromColumn.id !== toColumn.id) renumber(state.board, toColumn.id);
+        if (!sameColumn) renumber(state.board, toColumn.id);
 
-        // '완료' 컬럼에 들어오면 완료 시각을 찍고, 밖으로 나가면 지운다.
         const card = state.board.cards[cardId];
         if (card) {
-          const doneId = state.board.doneColumnId;
-          if (doneId && toColumn.id === doneId) {
-            if (!card.completedAt) card.completedAt = new Date().toISOString();
-          } else if (card.completedAt) {
-            delete card.completedAt;
+          // 섹션 배정: 명시되면 그대로, 생략되면 컬럼이 바뀔 때만 미분류로.
+          if (opts && opts.sectionId !== undefined) {
+            if (opts.sectionId === null) delete card.sectionId;
+            else card.sectionId = opts.sectionId;
+          } else if (!sameColumn) {
+            delete card.sectionId;
+          }
+          // 대상 컬럼에 그 섹션이 없으면 미분류 처리 (방어).
+          if (
+            card.sectionId &&
+            !toColumn.sections?.some((s) => s.id === card.sectionId)
+          ) {
+            delete card.sectionId;
+          }
+
+          // '완료' 컬럼에 들어오면 완료 시각을 찍고, 밖으로 나가면 지운다.
+          // (드래그 미리보기 이동에서는 skipCompletion으로 건너뛴다.)
+          if (!opts?.skipCompletion) {
+            const doneId = state.board.doneColumnId;
+            if (doneId && toColumn.id === doneId) {
+              if (!card.completedAt) card.completedAt = new Date().toISOString();
+            } else if (card.completedAt) {
+              delete card.completedAt;
+            }
           }
         }
       }),

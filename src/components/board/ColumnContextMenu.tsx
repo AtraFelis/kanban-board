@@ -25,6 +25,8 @@ interface ColumnContextMenuProps {
   // 현재 정렬과 변경 콜백. onSetSort 없으면 "정렬" 항목을 숨긴다.
   sort?: ColumnSort;
   onSetSort?: (sort: ColumnSort | null) => void;
+  // 카테고리 섹션 추가. 없으면 항목을 숨긴다 (완료 컬럼 등).
+  onAddSection?: () => void;
   // 컬럼 메뉴 뒤에 덧붙일 항목 (위젯은 여기에 위젯 설정을 넣는다).
   extraItems?: React.ReactNode;
 }
@@ -42,6 +44,7 @@ export function ColumnContextMenu({
   onSetDone,
   sort,
   onSetSort,
+  onAddSection,
   extraItems,
 }: ColumnContextMenuProps) {
   const manualActive = !sort || sort.by === "manual";
@@ -87,6 +90,9 @@ export function ColumnContextMenu({
               })}
             </ContextMenuSubContent>
           </ContextMenuSub>
+        )}
+        {onAddSection && (
+          <ContextMenuItem onSelect={onAddSection}>카테고리 추가</ContextMenuItem>
         )}
         <ContextMenuSeparator />
         <ContextMenuItem variant="destructive" onSelect={onDelete}>

@@ -111,7 +111,9 @@ export function CardView({ card, onOpen }: CardViewProps) {
         } ${onOpen ? "cursor-pointer hover:border-ring" : ""}`}
       >
         <div className="flex items-start gap-1.5">
-          <p className="flex-1 font-medium break-words">{card.title}</p>
+          <p className="min-w-0 flex-1 font-medium wrap-anywhere">
+            {card.title}
+          </p>
           {card.checklist.length > 0 && (
             <span className="mt-px shrink-0 text-xs text-muted-foreground tabular-nums">
               {doneCount}/{card.checklist.length}
@@ -137,7 +139,7 @@ export function CardView({ card, onOpen }: CardViewProps) {
         {description && (
           <>
             <p
-              className={`mt-1 text-xs break-words whitespace-pre-wrap text-muted-foreground ${
+              className={`mt-1 text-xs wrap-anywhere whitespace-pre-wrap text-muted-foreground ${
                 descLong && !descOpen ? "line-clamp-3" : ""
               }`}
             >
@@ -195,7 +197,7 @@ export function CardView({ card, onOpen }: CardViewProps) {
                       className="mt-0.5 size-3.5 shrink-0"
                     />
                     <span
-                      className={`flex-1 break-words ${
+                      className={`min-w-0 flex-1 wrap-anywhere ${
                         item.done
                           ? "text-muted-foreground line-through"
                           : "text-foreground/80"

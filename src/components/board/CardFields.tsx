@@ -7,7 +7,7 @@ import { createId } from "@/lib/id";
 import { allLabels } from "@/lib/labels";
 import { useBoardStore } from "@/store/boardStore";
 
-import type { CardFormValue } from "./cardForm";
+import { CARD_TITLE_MAX, type CardFormValue } from "./cardForm";
 
 // 자동완성 후보를 한 번에 보여줄 최대 개수.
 const TAG_SUGGEST_LIMIT = 6;
@@ -76,6 +76,7 @@ export function CardFields({
         <Input
           autoFocus
           value={value.title}
+          maxLength={CARD_TITLE_MAX}
           onChange={(e) => onChange({ title: e.target.value })}
         />
       </label>

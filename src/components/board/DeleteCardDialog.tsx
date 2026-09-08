@@ -28,7 +28,7 @@ export function DeleteCardDialog({
         <DialogHeader>
           <DialogTitle>정말 삭제할까요?</DialogTitle>
         </DialogHeader>
-        <p className="text-sm break-words text-muted-foreground">
+        <p className="text-sm wrap-anywhere text-muted-foreground">
           &ldquo;{card.title}&rdquo; 카드가 삭제됩니다.
         </p>
         <div className="flex justify-end gap-2">

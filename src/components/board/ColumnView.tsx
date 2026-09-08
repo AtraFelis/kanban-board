@@ -7,6 +7,12 @@ import {
 import { ask } from "@tauri-apps/plugin-dialog";
 
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { friendlyDateLabel, todayISODate, toISODate } from "@/lib/date";
 import { nextSort, sortCards, sortSummary } from "@/lib/sortCards";
@@ -15,7 +21,11 @@ import type { Card, Column } from "@/types";
 
 import { CardGroup } from "./CardGroup";
 import { ColumnContextMenu } from "./ColumnContextMenu";
+import { ColumnSectionGroup } from "./ColumnSectionGroup";
 import { SortableCard } from "./SortableCard";
+
+// '미분류' 그룹의 접힘 상태를 collapsedGroups 맵에 넣을 때 쓰는 키.
+const UNCATEGORIZED_KEY = "__uncategorized__";
 
 interface ColumnViewProps {
   column: Column;
@@ -24,6 +34,8 @@ interface ColumnViewProps {
   onOpenCreate: (columnId: string) => void;
   className?: string;
   columnMenuExtra?: React.ReactNode;
+  // 카드를 드래그하는 중인지. 드래그 중에는 빈 '미분류' 그룹도 드롭 대상으로 보여준다.
+  isDragging?: boolean;
 }
 
 interface DateGroup {
@@ -61,21 +73,35 @@ export function ColumnView({
   onOpenCreate,
   className,
   columnMenuExtra,
+  isDragging,
 }: ColumnViewProps) {
   const renameColumn = useBoardStore((s) => s.renameColumn);
   const removeColumn = useBoardStore((s) => s.removeColumn);
   const doneColumnId = useBoardStore((s) => s.board?.doneColumnId);
   const setDoneColumn = useBoardStore((s) => s.setDoneColumn);
   const setColumnSort = useBoardStore((s) => s.setColumnSort);
+  const addSection = useBoardStore((s) => s.addSection);
+  const toggleSectionCollapsed = useBoardStore((s) => s.toggleSectionCollapsed);
   const isDone = column.id === doneColumnId;
 
   // 정렬은 화면 표시만 바꾼다. cardIds 원본 순서는 그대로.
   const sortedCards = sortCards(cards, column.sort);
   const sortLabel = sortSummary(column.sort);
 
+  const sectionList = column.sections ?? [];
+  const useSections = !isDone && sectionList.length > 0;
+  // 섹션에 속하지 않은 카드들. 비어 있으면 '미분류' 그룹 자체를 숨긴다.
+  const uncategorizedCards = useSections
+    ? sortedCards.filter(
+        (c) => !c.sectionId || !sectionList.some((s) => s.id === c.sectionId),
+      )
+    : [];
+
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(column.title);
-  // 완료 컬럼 날짜 그룹의 접힘 상태 (날짜 키 → 접힘). 영속화하지 않는다.
+  const [addSectionOpen, setAddSectionOpen] = useState(false);
+  const [sectionDraft, setSectionDraft] = useState("");
+  // 완료 날짜 그룹 / '미분류' 그룹의 접힘 상태. 영속화하지 않는다.
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(
     {},
   );
@@ -101,6 +127,15 @@ export function ColumnView({
     setIsEditingTitle(false);
   }
 
+  function submitSection(e: React.FormEvent) {
+    e.preventDefault();
+    const name = sectionDraft.trim();
+    if (!name) return;
+    addSection(column.id, name);
+    setSectionDraft("");
+    setAddSectionOpen(false);
+  }
+
   async function confirmDelete() {
     const ok = await ask(
       `"${column.title}" 컬럼을 삭제하면 이 컬럼의 카드도 모두 삭제됩니다.\n계속할까요?`,
@@ -110,6 +145,7 @@ export function ColumnView({
   }
 
   return (
+    <>
     <ColumnContextMenu
       className={className}
       extraItems={columnMenuExtra}
@@ -117,6 +153,7 @@ export function ColumnView({
       onSetDone={() => setDoneColumn(isDone ? null : column.id)}
       sort={column.sort}
       onSetSort={(s) => setColumnSort(column.id, s)}
+      onAddSection={isDone ? undefined : () => setAddSectionOpen(true)}
       onAddCard={() => onOpenCreate(column.id)}
       onRename={startRename}
       onDelete={confirmDelete}
@@ -144,7 +181,7 @@ export function ColumnView({
         ) : (
           <button
             type="button"
-            className="flex-1 rounded px-1 py-0.5 text-left text-sm font-semibold hover:bg-accent"
+            className="min-w-0 flex-1 rounded px-1 py-0.5 text-left text-sm font-semibold wrap-anywhere hover:bg-accent"
             onClick={startRename}
           >
             {column.title}
@@ -239,6 +276,37 @@ export function ColumnView({
               </p>
             )}
           </>
+        ) : useSections ? (
+          <>
+            {(uncategorizedCards.length > 0 || isDragging) && (
+              <ColumnSectionGroup
+                columnId={column.id}
+                section={null}
+                cards={uncategorizedCards}
+                collapsed={collapsedGroups[UNCATEGORIZED_KEY] ?? false}
+                onToggleCollapsed={() =>
+                  setCollapsedGroups((m) => ({
+                    ...m,
+                    [UNCATEGORIZED_KEY]: !(m[UNCATEGORIZED_KEY] ?? false),
+                  }))
+                }
+                onOpenCard={onOpenCard}
+              />
+            )}
+            {sectionList.map((s) => (
+              <ColumnSectionGroup
+                key={s.id}
+                columnId={column.id}
+                section={s}
+                cards={sortedCards.filter((c) => c.sectionId === s.id)}
+                collapsed={!!s.collapsed}
+                onToggleCollapsed={() =>
+                  toggleSectionCollapsed(column.id, s.id)
+                }
+                onOpenCard={onOpenCard}
+              />
+            ))}
+          </>
         ) : (
           <>
             <SortableContext
@@ -258,5 +326,25 @@ export function ColumnView({
         )}
       </div>
     </ColumnContextMenu>
+
+      <Dialog open={addSectionOpen} onOpenChange={setAddSectionOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>카테고리 추가</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={submitSection} className="flex gap-2">
+            <Input
+              autoFocus
+              value={sectionDraft}
+              onChange={(e) => setSectionDraft(e.target.value)}
+              placeholder="카테고리 이름"
+            />
+            <Button type="submit" disabled={!sectionDraft.trim()}>
+              추가
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
