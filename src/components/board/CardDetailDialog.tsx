@@ -54,7 +54,10 @@ function CardEditForm({ card, onClose }: { card: Card; onClose: () => void }) {
 
   function save() {
     if (!draft.title.trim()) return;
-    updateCard(card.id, cardFormToInput(draft));
+    const { createdAt, ...rest } = cardFormToInput(draft);
+    // 생성일은 사용자가 실제로 바꿨을 때만 반영한다 (안 그러면 원래 시각 정보가 날아감).
+    const changed = draft.createdAt !== cardToForm(card).createdAt;
+    updateCard(card.id, changed ? { ...rest, createdAt } : rest);
     onClose();
   }
 

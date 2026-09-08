@@ -1,21 +1,32 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { createId } from "@/lib/id";
+import { allLabels } from "@/lib/labels";
+import { useBoardStore } from "@/store/boardStore";
 
 import type { CardFormValue } from "./cardForm";
+
+const LABEL_LIST_ID = "card-label-suggestions";
 
 interface CardFieldsProps {
   value: CardFormValue;
   onChange: (patch: Partial<CardFormValue>) => void;
 }
 
-// 제목·설명·마감일·라벨·체크리스트 입력 묶음. 스토어를 모르고 value/onChange로만 동작한다.
+// 제목·설명·마감일·생성일·라벨·체크리스트 입력 묶음. value/onChange로 동작하되,
+// 라벨 자동완성 목록만 스토어에서 파생한다.
 export function CardFields({ value, onChange }: CardFieldsProps) {
   const [labelDraft, setLabelDraft] = useState("");
   const [checklistDraft, setChecklistDraft] = useState("");
+
+  const board = useBoardStore((s) => s.board);
+  const labelOptions = useMemo(
+    () => (board ? allLabels(board) : []),
+    [board],
+  );
 
   function addLabel() {
     const label = labelDraft.trim();
@@ -57,15 +68,27 @@ export function CardFields({ value, onChange }: CardFieldsProps) {
         />
       </label>
 
-      <label className="grid gap-1 text-sm">
-        <span className="font-medium">마감일</span>
-        <Input
-          type="date"
-          value={value.dueDate}
-          onChange={(e) => onChange({ dueDate: e.target.value })}
-          className="w-44"
-        />
-      </label>
+      <div className="flex flex-wrap gap-4 text-sm">
+        <label className="grid gap-1">
+          <span className="font-medium">마감일</span>
+          <Input
+            type="date"
+            value={value.dueDate}
+            onChange={(e) => onChange({ dueDate: e.target.value })}
+            className="w-44"
+          />
+        </label>
+
+        <label className="grid gap-1">
+          <span className="font-medium">생성일</span>
+          <Input
+            type="date"
+            value={value.createdAt}
+            onChange={(e) => onChange({ createdAt: e.target.value })}
+            className="w-44"
+          />
+        </label>
+      </div>
 
       <div className="grid gap-1 text-sm">
         <span className="font-medium">카드 색</span>
@@ -118,7 +141,16 @@ export function CardFields({ value, onChange }: CardFieldsProps) {
           onBlur={addLabel}
           placeholder="라벨 입력 후 Enter"
           className="h-8"
+          list={LABEL_LIST_ID}
         />
+        {/* 이전에 쓴 태그 자동완성 (네이티브 datalist) */}
+        <datalist id={LABEL_LIST_ID}>
+          {labelOptions
+            .filter((l) => !value.labels.includes(l))
+            .map((l) => (
+              <option key={l} value={l} />
+            ))}
+        </datalist>
       </div>
 
       <div className="grid gap-1 text-sm">

@@ -11,6 +11,12 @@ export function toISODate(d: Date | string): string {
   return `${date.getFullYear()}-${mm}-${dd}`;
 }
 
+// <input type="date">의 "YYYY-MM-DD" 값을 로컬 자정 기준 ISO 문자열로.
+// (new Date("YYYY-MM-DD")는 UTC 자정으로 파싱되므로 "T00:00:00"을 붙여 로컬로 맞춘다.)
+export function isoFromLocalDate(value: string): string {
+  return new Date(`${value}T00:00:00`).toISOString();
+}
+
 // "YYYY-MM-DD"를 사람이 읽기 좋은 라벨로. 오늘/어제는 그 말로, 나머지는 그대로.
 export function friendlyDateLabel(iso: string): string {
   if (iso === todayISODate()) return "오늘";
