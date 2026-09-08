@@ -19,8 +19,11 @@ export interface Card {
   labels: string[];
   checklist: ChecklistItem[];
   order: number;
-  /** 생성 시각 (ISO 8601). 위젯의 "최근 카드" 정렬에 쓴다. */
+  /** 생성 시각 (ISO 8601). 위젯의 "최근 카드" 정렬에 쓴다. 사용자가 수정할 수 있다. */
   createdAt: string;
+  /** '완료' 컬럼으로 옮긴 시각 (ISO 8601). 완료 컬럼 밖으로 나가면 제거된다.
+   *  완료 컬럼의 날짜별 그룹은 이 값을 기준으로 묶는다. */
+  completedAt?: string;
   /** 카드 개별 배경색 (CSS 색 문자열). 없으면 기본색. */
   color?: string;
 }
@@ -39,4 +42,6 @@ export interface Board {
   title: string;
   columns: Column[];
   cards: Record<string, Card>;
+  /** '완료'로 취급할 컬럼 id. 미지정 시 migrate가 제목이 "완료"인 컬럼을 찾아 채운다. */
+  doneColumnId?: string;
 }

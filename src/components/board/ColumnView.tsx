@@ -34,6 +34,9 @@ export function ColumnView({
 }: ColumnViewProps) {
   const renameColumn = useBoardStore((s) => s.renameColumn);
   const removeColumn = useBoardStore((s) => s.removeColumn);
+  const doneColumnId = useBoardStore((s) => s.board?.doneColumnId);
+  const setDoneColumn = useBoardStore((s) => s.setDoneColumn);
+  const isDone = column.id === doneColumnId;
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(column.title);
@@ -71,6 +74,8 @@ export function ColumnView({
     <ColumnContextMenu
       className={className}
       extraItems={columnMenuExtra}
+      isDone={isDone}
+      onSetDone={() => setDoneColumn(isDone ? null : column.id)}
       onAddCard={() => onOpenCreate(column.id)}
       onRename={startRename}
       onDelete={confirmDelete}

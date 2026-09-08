@@ -34,6 +34,13 @@ function migrate(board: Board): void {
   for (const card of Object.values(board.cards)) {
     if (!card.createdAt) card.createdAt = now;
   }
+  // '완료' 컬럼: 지정이 없거나 가리키던 컬럼이 사라졌으면 제목으로 재해결한다.
+  const doneExists =
+    !!board.doneColumnId &&
+    board.columns.some((c) => c.id === board.doneColumnId);
+  if (!doneExists) {
+    board.doneColumnId = board.columns.find((c) => c.title === "완료")?.id;
+  }
 }
 
 // reload()가 자동 저장을 다시 유발해 창끼리 무한 루프가 도는 것을 막는 플래그.
@@ -66,6 +73,8 @@ interface BoardState {
   addColumn: (title: string) => void;
   renameColumn: (columnId: string, title: string) => void;
   removeColumn: (columnId: string) => void;
+  // '완료'로 취급할 컬럼을 지정/해제한다. 지정 시 그 컬럼의 카드에 완료 시각을 소급한다.
+  setDoneColumn: (columnId: string | null) => void;
 
   // 새 카드를 만들고 그 id를 반환한다.
   addCard: (columnId: string, input: NewCardInput) => string;
@@ -127,6 +136,23 @@ export const useBoardStore = create<BoardState>()(
         // 컬럼에 속한 카드도 함께 제거한다.
         for (const cardId of column.cardIds) delete state.board.cards[cardId];
         state.board.columns = state.board.columns.filter((c) => c.id !== columnId);
+        if (state.board.doneColumnId === columnId) {
+          state.board.doneColumnId = undefined;
+        }
+      }),
+
+    setDoneColumn: (columnId) =>
+      set((state) => {
+        if (!state.board) return;
+        state.board.doneColumnId = columnId ?? undefined;
+        if (!columnId) return;
+        // 이미 그 컬럼에 있는 카드에 완료 시각을 소급 기록해 날짜 그룹에 들어가게 한다.
+        const column = state.board.columns.find((c) => c.id === columnId);
+        const now = new Date().toISOString();
+        for (const cardId of column?.cardIds ?? []) {
+          const card = state.board.cards[cardId];
+          if (card && !card.completedAt) card.completedAt = now;
+        }
       }),
 
     addCard: (columnId, input) => {

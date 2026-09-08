@@ -14,6 +14,9 @@ interface ColumnContextMenuProps {
   children: React.ReactNode;
   // 컬럼 컨테이너 클래스. 풀보드/위젯이 각자 다른 크기감을 준다.
   className?: string;
+  // 이 컬럼이 '완료' 컬럼인지, 그리고 지정/해제 콜백. onSetDone 없으면 항목을 숨긴다.
+  isDone?: boolean;
+  onSetDone?: () => void;
   // 컬럼 메뉴 뒤에 덧붙일 항목 (위젯은 여기에 위젯 설정을 넣는다).
   extraItems?: React.ReactNode;
 }
@@ -27,6 +30,8 @@ export function ColumnContextMenu({
   onDoubleClick,
   children,
   className = "flex h-full min-h-0 min-w-0 flex-col gap-2 rounded-lg bg-muted/50 p-2",
+  isDone,
+  onSetDone,
   extraItems,
 }: ColumnContextMenuProps) {
   return (
@@ -44,6 +49,11 @@ export function ColumnContextMenu({
       <ContextMenuContent>
         <ContextMenuItem onSelect={onAddCard}>카드 추가</ContextMenuItem>
         <ContextMenuItem onSelect={onRename}>컬럼 이름 변경</ContextMenuItem>
+        {onSetDone && (
+          <ContextMenuItem onSelect={onSetDone}>
+            {isDone ? "✓ 완료 컬럼 (지정 해제)" : "완료 컬럼으로 지정"}
+          </ContextMenuItem>
+        )}
         <ContextMenuSeparator />
         <ContextMenuItem variant="destructive" onSelect={onDelete}>
           컬럼 삭제
