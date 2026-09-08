@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +30,8 @@ export function CardFields({
   const [tagSuggestOpen, setTagSuggestOpen] = useState(false);
   const [activeTagIndex, setActiveTagIndex] = useState(-1);
   const [checklistDraft, setChecklistDraft] = useState("");
+  // 체크리스트가 길어져도 입력칸이 화면 밖으로 밀리지 않게, 추가 후 다시 보이게 스크롤한다.
+  const checklistAddRef = useRef<HTMLDivElement>(null);
 
   const board = useBoardStore((s) => s.board);
   const knownTags = useMemo(() => (board ? allLabels(board) : []), [board]);
@@ -58,6 +60,11 @@ export function CardFields({
       checklist: [...value.checklist, { id: createId(), text, done: false }],
     });
     setChecklistDraft("");
+    // 새 항목이 렌더된 다음 프레임에 입력칸을 다시 보이게 (타자기 스크롤).
+    setTimeout(
+      () => checklistAddRef.current?.scrollIntoView({ block: "nearest" }),
+      0,
+    );
   }
 
   const doneCount = value.checklist.filter((i) => i.done).length;
@@ -271,7 +278,7 @@ export function CardFields({
             </li>
           ))}
         </ul>
-        <div className="flex gap-1">
+        <div ref={checklistAddRef} className="flex gap-1">
           <Input
             value={checklistDraft}
             onChange={(e) => setChecklistDraft(e.target.value)}

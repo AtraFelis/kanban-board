@@ -12,26 +12,21 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import { ask } from "@tauri-apps/plugin-dialog";
 
 import { COLUMN_GRID_STYLE } from "@/lib/columnGrid";
 import { useBoardStore } from "@/store/boardStore";
 import type { Board, Card } from "@/types";
 
-// 완료 컬럼에서 카드를 뺄 때의 확인. Tauri 밖(브라우저)에서는 경고 없이 진행한다.
-async function confirmLeaveDone(): Promise<boolean> {
-  try {
-    return await ask(
-      "이 카드를 '완료'에서 빼면 완료일 기록이 사라집니다. 계속할까요?",
-      { title: "완료 취소", kind: "warning", okLabel: "빼기", cancelLabel: "취소" },
-    );
-  } catch {
-    return true;
-  }
-}
-
 import { CardView } from "./CardView";
 import { ColumnView } from "./ColumnView";
+import { ConfirmDialog } from "./ConfirmDialog";
+
+// 완료 컬럼에서 다른 컬럼으로 옮길 때 확인받을 이동 정보.
+interface PendingLeaveDone {
+  cardId: string;
+  toColumnId: string;
+  toIndex: number;
+}
 
 // 카드 id로 그 카드가 속한 컬럼 id를 찾는다.
 function findColumnIdOfCard(board: Board, cardId: string): string | undefined {
@@ -75,6 +70,8 @@ export function BoardColumns({
 }: BoardColumnsProps) {
   const moveCard = useBoardStore((s) => s.moveCard);
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
+  const [pendingLeaveDone, setPendingLeaveDone] =
+    useState<PendingLeaveDone | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -127,13 +124,15 @@ export function BoardColumns({
       const col = board.columns.find((c) => c.id === target.columnId);
       if (col?.sort && col.sort.by !== "manual") return;
     }
-    // 완료 컬럼 → 다른 컬럼: 완료일 기록이 지워지므로 확인을 받는다.
+    // 완료 컬럼 → 다른 컬럼: 완료일 기록이 지워지므로 앱 확인 팝업을 띄운다.
     if (
       fromColumnId === board.doneColumnId &&
       target.columnId !== board.doneColumnId
     ) {
-      void confirmLeaveDone().then((ok) => {
-        if (ok) moveCard(activeId, target.columnId, target.index);
+      setPendingLeaveDone({
+        cardId: activeId,
+        toColumnId: target.columnId,
+        toIndex: target.index,
       });
       return;
     }
@@ -141,6 +140,7 @@ export function BoardColumns({
   }
 
   return (
+    <>
     <DndContext
       sensors={sensors}
       collisionDetection={closestCorners}
@@ -176,5 +176,26 @@ export function BoardColumns({
         {activeCard ? <CardView card={activeCard} /> : null}
       </DragOverlay>
     </DndContext>
+
+      <ConfirmDialog
+        open={pendingLeaveDone !== null}
+        title="완료 취소"
+        description="이 카드를 '완료'에서 빼면 완료일 기록이 사라집니다."
+        confirmLabel="빼기"
+        cancelLabel="취소"
+        destructive
+        onConfirm={() => {
+          if (pendingLeaveDone) {
+            moveCard(
+              pendingLeaveDone.cardId,
+              pendingLeaveDone.toColumnId,
+              pendingLeaveDone.toIndex,
+            );
+          }
+          setPendingLeaveDone(null);
+        }}
+        onCancel={() => setPendingLeaveDone(null)}
+      />
+    </>
   );
 }
