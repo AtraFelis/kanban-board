@@ -34,6 +34,8 @@ interface ColumnViewProps {
   onOpenCreate: (columnId: string) => void;
   className?: string;
   columnMenuExtra?: React.ReactNode;
+  // 카드를 드래그하는 중인지. 드래그 중에는 빈 '미분류' 그룹도 드롭 대상으로 보여준다.
+  isDragging?: boolean;
 }
 
 interface DateGroup {
@@ -71,6 +73,7 @@ export function ColumnView({
   onOpenCreate,
   className,
   columnMenuExtra,
+  isDragging,
 }: ColumnViewProps) {
   const renameColumn = useBoardStore((s) => s.renameColumn);
   const removeColumn = useBoardStore((s) => s.removeColumn);
@@ -87,6 +90,12 @@ export function ColumnView({
 
   const sectionList = column.sections ?? [];
   const useSections = !isDone && sectionList.length > 0;
+  // 섹션에 속하지 않은 카드들. 비어 있으면 '미분류' 그룹 자체를 숨긴다.
+  const uncategorizedCards = useSections
+    ? sortedCards.filter(
+        (c) => !c.sectionId || !sectionList.some((s) => s.id === c.sectionId),
+      )
+    : [];
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(column.title);
@@ -269,22 +278,21 @@ export function ColumnView({
           </>
         ) : useSections ? (
           <>
-            <ColumnSectionGroup
-              columnId={column.id}
-              section={null}
-              cards={sortedCards.filter(
-                (c) =>
-                  !c.sectionId || !sectionList.some((s) => s.id === c.sectionId),
-              )}
-              collapsed={collapsedGroups[UNCATEGORIZED_KEY] ?? false}
-              onToggleCollapsed={() =>
-                setCollapsedGroups((m) => ({
-                  ...m,
-                  [UNCATEGORIZED_KEY]: !(m[UNCATEGORIZED_KEY] ?? false),
-                }))
-              }
-              onOpenCard={onOpenCard}
-            />
+            {(uncategorizedCards.length > 0 || isDragging) && (
+              <ColumnSectionGroup
+                columnId={column.id}
+                section={null}
+                cards={uncategorizedCards}
+                collapsed={collapsedGroups[UNCATEGORIZED_KEY] ?? false}
+                onToggleCollapsed={() =>
+                  setCollapsedGroups((m) => ({
+                    ...m,
+                    [UNCATEGORIZED_KEY]: !(m[UNCATEGORIZED_KEY] ?? false),
+                  }))
+                }
+                onOpenCard={onOpenCard}
+              />
+            )}
             {sectionList.map((s) => (
               <ColumnSectionGroup
                 key={s.id}

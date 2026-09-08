@@ -52,7 +52,8 @@ function resolveDropTarget(
   if (overType === "column") {
     const column = board.columns.find((c) => c.id === overId);
     if (!column) return undefined;
-    return { columnId: column.id, index: column.cardIds.length };
+    // 컬럼 빈 영역에 떨구면 '미분류'로. (섹션 없는 컬럼은 어차피 sectionId가 없어 무해)
+    return { columnId: column.id, index: column.cardIds.length, sectionId: null };
   }
 
   if (overType === "section") {
@@ -129,8 +130,10 @@ export function BoardColumns({
     if (!sameColumn && fromColumnId === board.doneColumnId) return;
 
     if (sameColumn) {
-      // 같은 컬럼: 섹션이 바뀌는 경우에만 실시간 반영. 단순 순서 변경은 dragEnd에서.
-      if (target.sectionId === undefined) return;
+      // 같은 컬럼: 섹션/카드 위에서 섹션이 바뀔 때만 실시간 반영. 컬럼 빈 영역 hover나
+      // 단순 순서 변경은 dragEnd에서 처리(미리보기가 튀지 않도록).
+      const overType = over.data.current?.type as string | undefined;
+      if (overType === "column" || target.sectionId === undefined) return;
       const curSection = board.cards[activeId]?.sectionId ?? null;
       if (curSection === (target.sectionId ?? null)) return;
     }
@@ -213,6 +216,7 @@ export function BoardColumns({
               onOpenCreate={onOpenCreate}
               className={columnClassName}
               columnMenuExtra={columnMenuExtra}
+              isDragging={activeCardId !== null}
             />
           );
         })}
