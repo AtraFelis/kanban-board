@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useBoardStore } from "@/store/boardStore";
+import { type CardPatch, useBoardStore } from "@/store/boardStore";
 import type { Card } from "@/types";
 
 import { CardFields } from "./CardFields";
@@ -49,15 +49,24 @@ export function CardDetailDialog({ cardId, onClose }: CardDetailDialogProps) {
 function CardEditForm({ card, onClose }: { card: Card; onClose: () => void }) {
   const updateCard = useBoardStore((s) => s.updateCard);
   const removeCard = useBoardStore((s) => s.removeCard);
+  // 이 카드가 지금 '완료' 컬럼에 있는지 → "완료일" 입력 노출 여부.
+  const isInDoneColumn = useBoardStore((s) => {
+    const b = s.board;
+    if (!b?.doneColumnId) return false;
+    const doneColumn = b.columns.find((c) => c.id === b.doneColumnId);
+    return !!doneColumn?.cardIds.includes(card.id);
+  });
 
   const [draft, setDraft] = useState<CardFormValue>(() => cardToForm(card));
 
   function save() {
     if (!draft.title.trim()) return;
-    const { createdAt, ...rest } = cardFormToInput(draft);
-    // 생성일은 사용자가 실제로 바꿨을 때만 반영한다 (안 그러면 원래 시각 정보가 날아감).
-    const changed = draft.createdAt !== cardToForm(card).createdAt;
-    updateCard(card.id, changed ? { ...rest, createdAt } : rest);
+    const base = cardToForm(card);
+    const patch: CardPatch = cardFormToInput(draft);
+    // 시작일·완료일은 사용자가 실제로 바꿨을 때만 반영한다 (안 그러면 시각 정보가 날아감).
+    if (draft.createdAt === base.createdAt) delete patch.createdAt;
+    if (draft.completedAt === base.completedAt) delete patch.completedAt;
+    updateCard(card.id, patch);
     onClose();
   }
 
@@ -67,6 +76,7 @@ function CardEditForm({ card, onClose }: { card: Card; onClose: () => void }) {
         <CardFields
           value={draft}
           onChange={(patch) => setDraft((prev) => ({ ...prev, ...patch }))}
+          showCompletedAt={isInDoneColumn}
         />
       </div>
 

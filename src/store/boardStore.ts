@@ -60,7 +60,8 @@ function renumber(board: Board, columnId: string): void {
   });
 }
 
-type CardPatch = Partial<
+// updateCard에 넘길 수 있는 부분 갱신. 값이 undefined면 그 필드를 제거한다.
+export type CardPatch = Partial<
   Pick<
     Card,
     | "title"
@@ -70,6 +71,7 @@ type CardPatch = Partial<
     | "checklist"
     | "color"
     | "createdAt"
+    | "completedAt"
   >
 >;
 
@@ -202,7 +204,14 @@ export const useBoardStore = create<BoardState>()(
     updateCard: (cardId, patch) =>
       set((state) => {
         const card = state.board?.cards[cardId];
-        if (card) Object.assign(card, patch);
+        if (!card) return;
+        for (const [key, val] of Object.entries(patch)) {
+          if (val === undefined) {
+            delete (card as Record<string, unknown>)[key];
+          } else {
+            (card as Record<string, unknown>)[key] = val;
+          }
+        }
       }),
 
     removeCard: (cardId) =>

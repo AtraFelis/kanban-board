@@ -12,10 +12,23 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
+import { ask } from "@tauri-apps/plugin-dialog";
 
 import { COLUMN_GRID_STYLE } from "@/lib/columnGrid";
 import { useBoardStore } from "@/store/boardStore";
 import type { Board, Card } from "@/types";
+
+// 완료 컬럼에서 카드를 뺄 때의 확인. Tauri 밖(브라우저)에서는 경고 없이 진행한다.
+async function confirmLeaveDone(): Promise<boolean> {
+  try {
+    return await ask(
+      "이 카드를 '완료'에서 빼면 완료일 기록이 사라집니다. 계속할까요?",
+      { title: "완료 취소", kind: "warning", okLabel: "빼기", cancelLabel: "취소" },
+    );
+  } catch {
+    return true;
+  }
+}
 
 import { CardView } from "./CardView";
 import { ColumnView } from "./ColumnView";
@@ -89,6 +102,8 @@ export function BoardColumns({
       over.data.current?.type as string | undefined,
     );
     if (!fromColumnId || !target || fromColumnId === target.columnId) return;
+    // 완료 컬럼에서 빼는 중이면 드롭 확정 때 경고 후 옮긴다 (미리보기 이동은 생략).
+    if (fromColumnId === board.doneColumnId) return;
     moveCard(activeId, target.columnId, target.index);
   }
 
@@ -106,11 +121,21 @@ export function BoardColumns({
       over.data.current?.type as string | undefined,
     );
     if (!target) return;
-    // 정렬이 켜진 컬럼에서는 같은 컬럼 내 수동 재배치를 무시한다 (표시가 정렬을 따르므로).
     const fromColumnId = findColumnIdOfCard(board, activeId);
+    // 정렬이 켜진 컬럼에서는 같은 컬럼 내 수동 재배치를 무시한다 (표시가 정렬을 따르므로).
     if (fromColumnId === target.columnId) {
       const col = board.columns.find((c) => c.id === target.columnId);
       if (col?.sort && col.sort.by !== "manual") return;
+    }
+    // 완료 컬럼 → 다른 컬럼: 완료일 기록이 지워지므로 확인을 받는다.
+    if (
+      fromColumnId === board.doneColumnId &&
+      target.columnId !== board.doneColumnId
+    ) {
+      void confirmLeaveDone().then((ok) => {
+        if (ok) moveCard(activeId, target.columnId, target.index);
+      });
+      return;
     }
     moveCard(activeId, target.columnId, target.index);
   }

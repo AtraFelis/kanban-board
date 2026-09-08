@@ -15,11 +15,17 @@ const TAG_SUGGEST_LIMIT = 6;
 interface CardFieldsProps {
   value: CardFormValue;
   onChange: (patch: Partial<CardFormValue>) => void;
+  // 완료 컬럼에 있는 카드만 "완료일" 입력을 보여준다.
+  showCompletedAt?: boolean;
 }
 
-// 제목·설명·시작일·마감일·색·태그·체크리스트 입력 묶음. value/onChange로 동작하되,
-// 태그 자동완성 목록만 스토어에서 파생한다.
-export function CardFields({ value, onChange }: CardFieldsProps) {
+// 제목·설명·시작일·마감일(·완료일)·색·태그·체크리스트 입력 묶음. value/onChange로
+// 동작하되, 태그 자동완성 목록만 스토어에서 파생한다.
+export function CardFields({
+  value,
+  onChange,
+  showCompletedAt,
+}: CardFieldsProps) {
   const [tagDraft, setTagDraft] = useState("");
   const [tagSuggestOpen, setTagSuggestOpen] = useState(false);
   const [activeTagIndex, setActiveTagIndex] = useState(-1);
@@ -98,6 +104,18 @@ export function CardFields({ value, onChange }: CardFieldsProps) {
             className="w-44"
           />
         </label>
+
+        {showCompletedAt && (
+          <label className="grid gap-1">
+            <span className="font-medium">완료일</span>
+            <Input
+              type="date"
+              value={value.completedAt}
+              onChange={(e) => onChange({ completedAt: e.target.value })}
+              className="w-44"
+            />
+          </label>
+        )}
       </div>
 
       <div className="grid gap-1 text-sm">
