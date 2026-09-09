@@ -19,7 +19,6 @@ import { useBoardStore } from "@/store/boardStore";
 import type { Card, Column } from "@/types";
 
 import { CardGroup } from "./CardGroup";
-import { ColumnCardPages } from "./ColumnCardPages";
 import { ColumnContextMenu } from "./ColumnContextMenu";
 import { ColumnSectionGroup } from "./ColumnSectionGroup";
 import { ConfirmDialog } from "./ConfirmDialog";
@@ -218,16 +217,6 @@ export function ColumnView({
           variant="ghost"
           size="icon"
           className="size-7"
-          aria-label="카드 추가"
-          onClick={() => onOpenCreate(column.id)}
-        >
-          +
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="size-7"
           aria-label="컬럼 삭제"
           onClick={confirmDelete}
         >
@@ -325,17 +314,7 @@ export function ColumnView({
             )}
           </>
         ) : useSections ? (
-          <ColumnCardPages
-            onAddCard={() => onOpenCreate(column.id)}
-            isDragging={isDragging}
-            recalcKey={
-              `${sortedCards.length}|${uncategorizedCards.length}|` +
-              `${collapsedGroups[UNCATEGORIZED_KEY] ? 1 : 0}|` +
-              sectionList
-                .map((s) => `${s.id}:${s.collapsed ? 1 : 0}`)
-                .join(",")
-            }
-          >
+          <>
             {(uncategorizedCards.length > 0 || isDragging) && (
               <ColumnSectionGroup
                 columnId={column.id}
@@ -364,32 +343,23 @@ export function ColumnView({
                 onOpenCard={onOpenCard}
               />
             ))}
-          </ColumnCardPages>
-        ) : cards.length === 0 ? (
-          <p className="pointer-events-none px-1 pt-1 text-xs text-muted-foreground">
-            더블클릭하거나 우클릭해서 카드를 추가하세요.
-          </p>
+          </>
         ) : (
-          <ColumnCardPages
-            onAddCard={() => onOpenCreate(column.id)}
-            isDragging={isDragging}
-            recalcKey={sortedCards.length}
-          >
-            <div className="space-y-2">
-              <SortableContext
-                items={sortedCards.map((c) => c.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                {sortedCards.map((card) => (
-                  <SortableCard
-                    key={card.id}
-                    card={card}
-                    onOpen={onOpenCard}
-                  />
-                ))}
-              </SortableContext>
-            </div>
-          </ColumnCardPages>
+          <>
+            <SortableContext
+              items={sortedCards.map((c) => c.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {sortedCards.map((card) => (
+                <SortableCard key={card.id} card={card} onOpen={onOpenCard} />
+              ))}
+            </SortableContext>
+            {cards.length === 0 && (
+              <p className="pointer-events-none px-1 pt-1 text-xs text-muted-foreground">
+                더블클릭하거나 우클릭해서 카드를 추가하세요.
+              </p>
+            )}
+          </>
         )}
       </div>
 
