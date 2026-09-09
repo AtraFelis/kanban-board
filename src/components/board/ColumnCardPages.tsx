@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useDndMonitor } from "@dnd-kit/core";
 
 interface ColumnCardPagesProps {
   // 페이지로 흘려보낼 카드/섹션 내용. 카드 요소에는 break-inside:avoid가 있어야 한다.
@@ -12,77 +13,50 @@ interface ColumnCardPagesProps {
 }
 
 // 한 번의 휠 제스처(관성 스크롤)로 여러 페이지가 넘어가지 않게 하는 잠금 시간.
-const WHEEL_LOCK_MS = 450;
-// 페이지 전환 애니메이션 길이.
-const SCROLL_ANIM_MS = 240;
+const WHEEL_LOCK_MS = 420;
+// 드래그 중 커서가 가장자리에서 이만큼 안쪽에 오면 페이지를 넘긴다.
+const DRAG_FLIP_EDGE_PX = 48;
+// 드래그 중 페이지 넘김 사이 최소 간격.
+const DRAG_FLIP_LOCK_MS = 500;
 
 // 컬럼의 카드가 세로로 넘칠 때, 스크롤바 대신 스마트폰 홈화면처럼 가로 페이지로 나눈다.
-// CSS 다단(column-width = 컨테이너 폭)으로 내용을 아래로 채우다 넘치면 오른쪽 페이지로 흐른다.
-// 휠 아래로 = 다음 페이지, 위로 = 이전 페이지 (양 끝에서 순환). 하단에 페이지 점 표시.
+// CSS 다단(column-width = 뷰포트 폭)으로 내용을 아래로 채우다 넘치면 다음 페이지로 흐르고,
+// translateX로 페이지를 밀어 보여준다 (scrollLeft를 안 써서 @dnd-kit 자동 스크롤·onScroll
+// 되먹임이 없다 → 위젯 크래시 방지). 페이지 이동: 휠 / 드래그 가장자리 / 하단 점.
 export function ColumnCardPages({
   children,
   onAddCard,
   recalcKey,
   isDragging,
 }: ColumnCardPagesProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
   const [pageWidth, setPageWidth] = useState(0);
   const [pageCount, setPageCount] = useState(1);
   const [page, setPage] = useState(0);
   const wheelLockUntil = useRef(0);
-  // 진행 중인 스크롤 애니메이션 타이머 / 재계산 예약.
-  const scrollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const dragFlipLock = useRef(0);
   const recalcRaf = useRef<number | null>(null);
 
-  // scrollLeft를 timer로 트윈한다 (scroll-behavior:smooth·rAF가 환경 따라 안 먹어서).
-  const animateScrollLeft = useCallback((to: number) => {
-    const el = scrollRef.current;
-    if (!el) return;
-    if (scrollTimer.current) clearInterval(scrollTimer.current);
-    const from = el.scrollLeft;
-    const dist = to - from;
-    if (Math.abs(dist) < 1) {
-      el.scrollLeft = to;
+  const goTo = useCallback((next: number, count: number) => {
+    if (count <= 1) {
+      setPage(0);
       return;
     }
-    const start = Date.now();
-    scrollTimer.current = setInterval(() => {
-      const node = scrollRef.current;
-      if (!node) {
-        if (scrollTimer.current) clearInterval(scrollTimer.current);
-        return;
-      }
-      const t = Math.min(1, (Date.now() - start) / SCROLL_ANIM_MS);
-      const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic
-      node.scrollLeft = from + dist * eased;
-      if (t >= 1 && scrollTimer.current) clearInterval(scrollTimer.current);
-    }, 16);
+    setPage(((next % count) + count) % count);
   }, []);
 
-  const goTo = useCallback(
-    (next: number) => {
-      const el = scrollRef.current;
-      if (!el || pageCount <= 1) return;
-      const wrapped = ((next % pageCount) + pageCount) % pageCount;
-      setPage(wrapped);
-      animateScrollLeft(wrapped * el.clientWidth);
-    },
-    [pageCount, animateScrollLeft],
-  );
-
-  // 페이지 폭·개수를 다시 잰다. 상태는 값이 바뀔 때만 갱신하고(렌더 루프 방지),
-  // 스크롤 위치 보정은 DOM에 직접 쓴다.
+  // 페이지 폭·개수를 다시 잰다. 값이 바뀔 때만 상태 갱신(렌더 루프 방지).
   const recalc = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el || el.clientWidth === 0) return;
-    const w = el.clientWidth;
-    // 1px이라도 넘치면 다음 페이지가 있는 것 → ceil. (-1은 sub-pixel 흔들림 방지)
-    const count = Math.max(1, Math.ceil((el.scrollWidth - 1) / w));
+    const vp = viewportRef.current;
+    const track = trackRef.current;
+    if (!vp || track === null || vp.clientWidth === 0) return;
+    const w = vp.clientWidth;
+    // track은 다단 내용 전체 폭으로 늘어난다 → 폭 / 뷰포트 = 페이지 수.
+    const count = Math.max(1, Math.round(track.scrollWidth / w));
     setPageWidth((prev) => (prev === w ? prev : w));
     setPageCount((prev) => (prev === count ? prev : count));
     setPage((prev) => (prev <= count - 1 ? prev : count - 1));
-    const maxLeft = (count - 1) * w;
-    if (el.scrollLeft > maxLeft + 1) el.scrollLeft = maxLeft;
   }, []);
 
   const scheduleRecalc = useCallback(() => {
@@ -93,59 +67,31 @@ export function ColumnCardPages({
     });
   }, [recalc]);
 
-  // 내용이 바뀌면(드래그 중이 아닐 때만) 재계산 예약.
+  // 내용이 바뀌면(드래그 중이 아닐 때만) 재계산. 드래그 종료 시에도 한 번.
   useEffect(() => {
     if (isDragging) return;
     scheduleRecalc();
   }, [recalcKey, isDragging, scheduleRecalc]);
 
-  // 드래그가 끝나면 지금 스크롤 위치에서 가장 가까운 페이지로 스냅 + 재계산.
-  // (드래그 중엔 @dnd-kit 자동 스크롤이 컨테이너를 페이지 중간까지 옮겨놨을 수 있음)
-  const wasDragging = useRef(false);
+  // 뷰포트 크기 변화 → 재계산.
   useEffect(() => {
-    if (wasDragging.current && !isDragging) {
-      const el = scrollRef.current;
-      if (el && el.clientWidth) {
-        const p = Math.round(el.scrollLeft / el.clientWidth);
-        setPage((cur) => (cur === p ? cur : p));
-        animateScrollLeft(p * el.clientWidth);
-      }
-      scheduleRecalc();
-    }
-    wasDragging.current = !!isDragging;
-  }, [isDragging, scheduleRecalc, animateScrollLeft]);
-
-  // 컨테이너 크기 변화 → 재계산 예약.
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
+    const vp = viewportRef.current;
+    if (!vp) return;
     const ro = new ResizeObserver(() => scheduleRecalc());
-    ro.observe(el);
+    ro.observe(vp);
     return () => ro.disconnect();
   }, [scheduleRecalc]);
 
-  // 언마운트 정리.
   useEffect(() => {
     return () => {
-      if (scrollTimer.current) clearInterval(scrollTimer.current);
       if (recalcRaf.current != null) cancelAnimationFrame(recalcRaf.current);
     };
   }, []);
 
-  // 자유 스크롤(트랙패드 등)로 페이지가 바뀌면 점 표시를 맞춘다.
-  function syncPageFromScroll() {
-    if (isDragging) return; // 드래그 중 스크롤 이벤트로 상태를 건드리지 않는다
-    const el = scrollRef.current;
-    if (!el || el.clientWidth === 0) return;
-    if (Date.now() < wheelLockUntil.current) return; // 휠 애니메이션 중엔 무시
-    const p = Math.round(el.scrollLeft / el.clientWidth);
-    setPage((cur) => (cur === p ? cur : p));
-  }
-
-  // 휠: 아래로 → 다음, 위로 → 이전. non-passive 리스너라야 preventDefault 가능.
+  // 휠: 아래로 → 다음 페이지, 위로 → 이전 (양 끝에서 순환). non-passive라야 preventDefault.
   useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
+    const vp = viewportRef.current;
+    if (!vp) return;
     function onWheel(e: WheelEvent) {
       if (pageCount <= 1) return;
       e.preventDefault();
@@ -154,36 +100,66 @@ export function ColumnCardPages({
       const delta = e.deltaY || e.deltaX;
       if (delta === 0) return;
       wheelLockUntil.current = now + WHEEL_LOCK_MS;
-      goTo(page + (delta > 0 ? 1 : -1));
+      goTo(page + (delta > 0 ? 1 : -1), pageCount);
     }
-    el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
+    vp.addEventListener("wheel", onWheel, { passive: false });
+    return () => vp.removeEventListener("wheel", onWheel);
   }, [page, pageCount, goTo]);
+
+  // 드래그 중 커서가 뷰포트 좌/우 가장자리에 닿으면 페이지를 한 장 넘긴다.
+  // 항상 페이지 단위로만 이동하므로 "중간에 멈춤" 상태가 없다.
+  useDndMonitor({
+    onDragMove(event) {
+      if (pageCount <= 1) return;
+      const vp = viewportRef.current;
+      const act = event.activatorEvent;
+      if (!vp || !(act instanceof MouseEvent)) return;
+      const px = act.clientX + event.delta.x;
+      const py = act.clientY + event.delta.y;
+      const box = vp.getBoundingClientRect();
+      if (py < box.top - 40 || py > box.bottom + 40) return;
+      const now = Date.now();
+      if (now < dragFlipLock.current) return;
+      if (px > box.right - DRAG_FLIP_EDGE_PX && page < pageCount - 1) {
+        dragFlipLock.current = now + DRAG_FLIP_LOCK_MS;
+        goTo(page + 1, pageCount);
+      } else if (px < box.left + DRAG_FLIP_EDGE_PX && page > 0) {
+        dragFlipLock.current = now + DRAG_FLIP_LOCK_MS;
+        goTo(page - 1, pageCount);
+      }
+    },
+    onDragEnd() {
+      dragFlipLock.current = 0;
+    },
+    onDragCancel() {
+      dragFlipLock.current = 0;
+    },
+  });
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div
-        ref={scrollRef}
-        onScroll={syncPageFromScroll}
+        ref={viewportRef}
         onDoubleClick={(e) => {
           if (e.target === e.currentTarget) onAddCard();
         }}
-        // overflow-x:auto — 드래그로 카드를 다른 페이지로 옮길 수 있도록 @dnd-kit
-        // 자동 스크롤이 동작해야 하고(그래야 드롭 대상 좌표도 갱신됨), 스크롤바만 숨긴다.
-        // 드래그 중엔 재계산·페이지 동기화를 멈춰 렌더 폭주(위젯 크래시)를 막고,
-        // 드래그가 끝나면 가장 가까운 페이지로 스냅한다.
-        className="min-h-0 flex-1 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        style={
-          pageWidth
-            ? { columnWidth: `${pageWidth}px`, columnGap: 0 }
-            : undefined
-        }
+        className="relative min-h-0 flex-1 overflow-hidden"
       >
-        {children}
+        <div
+          ref={trackRef}
+          className="h-full transition-transform duration-200 ease-out"
+          style={{
+            transform: `translateX(-${page * pageWidth}px)`,
+            columnWidth: pageWidth ? `${pageWidth}px` : undefined,
+            columnGap: 0,
+            columnFill: "auto",
+          }}
+        >
+          {children}
+        </div>
       </div>
 
-      {/* 점 영역 높이를 항상 확보한다. 점 표시/숨김이 컨테이너 높이를 바꿔
-          페이지 수 재계산이 요동치는 것(위젯 크래시)을 막는다. */}
+      {/* 점 영역 높이를 항상 확보 → 점 표시/숨김이 재계산을 요동치게 하지 않는다. */}
       <div className="flex h-4 shrink-0 items-center justify-center gap-1">
         {pageCount > 1 &&
           Array.from({ length: pageCount }, (_, i) => (
@@ -191,7 +167,7 @@ export function ColumnCardPages({
               key={i}
               type="button"
               aria-label={`${i + 1}페이지로`}
-              onClick={() => goTo(i)}
+              onClick={() => goTo(i, pageCount)}
               className={`h-1.5 rounded-full transition-all ${
                 i === page ? "w-4 bg-foreground/70" : "w-1.5 bg-foreground/25"
               }`}
