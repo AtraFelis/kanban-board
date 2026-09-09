@@ -52,12 +52,20 @@ export function CardFields({
   return (
     <div className="grid gap-5">
       <label className="grid gap-1 text-sm">
-        <span className="font-medium">제목</span>
+        <span className="font-medium">
+          제목{" "}
+          <span className="font-normal text-destructive" aria-hidden>
+            *
+          </span>
+        </span>
         <Input
           autoFocus
+          required
+          aria-required
           value={value.title}
           maxLength={CARD_TITLE_MAX}
           onChange={(e) => onChange({ title: e.target.value })}
+          placeholder="제목을 입력하세요 (필수)"
         />
       </label>
 
