@@ -114,7 +114,7 @@ export function CardFields({
       <div className="grid gap-2 text-sm">
         <span className="font-medium">태그</span>
         {value.labels.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1">
+          <div className="flex flex-wrap items-center gap-1.5">
             {value.labels.map((tag) => (
               <button
                 key={tag}
@@ -122,7 +122,7 @@ export function CardFields({
                 onClick={() =>
                   onChange({ labels: value.labels.filter((t) => t !== tag) })
                 }
-                className="inline-flex items-center gap-1 rounded-md bg-secondary px-2 py-0.5 text-xs text-secondary-foreground hover:bg-secondary/70"
+                className="inline-flex items-center gap-1.5 rounded-md bg-secondary px-2.5 py-1 text-xs text-secondary-foreground hover:bg-secondary/70"
                 title="클릭하면 제거"
               >
                 {tag}

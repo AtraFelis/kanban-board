@@ -83,7 +83,7 @@ export function ChecklistEditor({ items, onChange }: ChecklistEditorProps) {
           items={items.map((i) => i.id)}
           strategy={verticalListSortingStrategy}
         >
-          <ul className="grid gap-1">
+          <ul className="grid gap-0.5">
             {items.map((item) => (
               <ChecklistRow
                 key={item.id}
