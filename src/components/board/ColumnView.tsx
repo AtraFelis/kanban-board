@@ -39,6 +39,8 @@ interface ColumnViewProps {
   isDragging?: boolean;
   // 컬럼 하단에 제목만 입력하는 빠른 추가 바를 보여준다 (풀보드 전용).
   quickAdd?: boolean;
+  // 컬럼 순서 변경용 드래그 손잡이. 있으면 헤더 앞에 렌더한다 (풀보드 전용).
+  dragHandle?: React.ReactNode;
 }
 
 interface DateGroup {
@@ -78,6 +80,7 @@ export function ColumnView({
   columnMenuExtra,
   isDragging,
   quickAdd,
+  dragHandle,
 }: ColumnViewProps) {
   const renameColumn = useBoardStore((s) => s.renameColumn);
   const removeColumn = useBoardStore((s) => s.removeColumn);
@@ -121,7 +124,7 @@ export function ColumnView({
   // 빈 컬럼에도 카드를 떨어뜨릴 수 있도록 컬럼 자체를 드롭 대상으로 등록.
   const { setNodeRef, isOver } = useDroppable({
     id: column.id,
-    data: { type: "column" },
+    data: { type: "column", columnId: column.id },
   });
 
   function startRename() {
@@ -184,6 +187,7 @@ export function ColumnView({
       }}
     >
       <div className="flex items-center gap-1">
+        {dragHandle}
         {isEditingTitle ? (
           <Input
             autoFocus

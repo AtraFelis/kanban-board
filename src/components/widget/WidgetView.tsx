@@ -15,6 +15,7 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { getAutostart, setAutostart } from "@/lib/autostart";
+import { WIDGET_MIN_ROW_HEIGHT } from "@/lib/columnGrid";
 import { exportBoardToFile, importBoardFromFile } from "@/lib/boardIO";
 import {
   getWidgetSettings,
@@ -207,6 +208,7 @@ export function WidgetView() {
                 onOpenCreate={setCreateColumnId}
                 columnClassName={WIDGET_COLUMN_CLASS}
                 columnMenuExtra={widgetMenuItems}
+                minRowHeight={WIDGET_MIN_ROW_HEIGHT}
               />
             )}
           </div>

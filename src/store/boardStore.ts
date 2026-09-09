@@ -96,6 +96,8 @@ interface BoardState {
   addColumn: (title: string) => void;
   renameColumn: (columnId: string, title: string) => void;
   removeColumn: (columnId: string) => void;
+  // 컬럼을 columns 배열의 toIndex 위치로 옮긴다 (풀보드에서 컬럼 순서 변경).
+  moveColumn: (columnId: string, toIndex: number) => void;
   // '완료'로 취급할 컬럼을 지정/해제한다. 지정 시 그 컬럼의 카드에 완료 시각을 소급한다.
   setDoneColumn: (columnId: string | null) => void;
   // 컬럼의 정렬 방식을 설정한다 (null이면 manual로 되돌림). 화면 표시만 바뀐다.
@@ -192,6 +194,18 @@ export const useBoardStore = create<BoardState>()(
         if (state.board.doneColumnId === columnId) {
           state.board.doneColumnId = undefined;
         }
+      }),
+
+    moveColumn: (columnId, toIndex) =>
+      set((state) => {
+        if (!state.board) return;
+        const cols = state.board.columns;
+        const from = cols.findIndex((c) => c.id === columnId);
+        if (from === -1) return;
+        const to = Math.max(0, Math.min(toIndex, cols.length - 1));
+        if (from === to) return;
+        const [col] = cols.splice(from, 1);
+        cols.splice(to, 0, col);
       }),
 
     setDoneColumn: (columnId) =>
