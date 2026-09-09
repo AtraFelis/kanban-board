@@ -325,7 +325,17 @@ export function ColumnView({
             )}
           </>
         ) : useSections ? (
-          <ColumnCardPages onAddCard={() => onOpenCreate(column.id)}>
+          <ColumnCardPages
+            onAddCard={() => onOpenCreate(column.id)}
+            isDragging={isDragging}
+            recalcKey={
+              `${sortedCards.length}|${uncategorizedCards.length}|` +
+              `${collapsedGroups[UNCATEGORIZED_KEY] ? 1 : 0}|` +
+              sectionList
+                .map((s) => `${s.id}:${s.collapsed ? 1 : 0}`)
+                .join(",")
+            }
+          >
             {(uncategorizedCards.length > 0 || isDragging) && (
               <ColumnSectionGroup
                 columnId={column.id}
@@ -360,7 +370,11 @@ export function ColumnView({
             더블클릭하거나 우클릭해서 카드를 추가하세요.
           </p>
         ) : (
-          <ColumnCardPages onAddCard={() => onOpenCreate(column.id)}>
+          <ColumnCardPages
+            onAddCard={() => onOpenCreate(column.id)}
+            isDragging={isDragging}
+            recalcKey={sortedCards.length}
+          >
             <div className="space-y-2">
               <SortableContext
                 items={sortedCards.map((c) => c.id)}
