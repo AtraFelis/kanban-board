@@ -11,11 +11,17 @@ import {
   type DragOverEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
+import {
+  SortableContext,
+  horizontalListSortingStrategy,
+  sortableKeyboardCoordinates,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
-import { COLUMN_GRID_STYLE } from "@/lib/columnGrid";
+import { columnGridStyle, FULLBOARD_MIN_ROW_HEIGHT } from "@/lib/columnGrid";
 import { useBoardStore } from "@/store/boardStore";
-import type { Board, Card } from "@/types";
+import type { Board, Card, Column } from "@/types";
 
 import { CardView } from "./CardView";
 import { ColumnView } from "./ColumnView";
@@ -50,7 +56,10 @@ function resolveDropTarget(
   const overType = overData?.type as string | undefined;
 
   if (overType === "column") {
-    const column = board.columns.find((c) => c.id === overId);
+    // 컬럼 빈 영역 droppable은 id=column.id, 순서변경용 sortable은 id="column:"+id라
+    // data.columnId를 우선 쓴다.
+    const columnId = (overData?.columnId as string | undefined) ?? overId;
+    const column = board.columns.find((c) => c.id === columnId);
     if (!column) return undefined;
     // 컬럼 빈 영역에 떨구면 '미분류'로. (섹션 없는 컬럼은 어차피 sectionId가 없어 무해)
     return { columnId: column.id, index: column.cardIds.length, sectionId: null };
@@ -85,6 +94,71 @@ interface BoardColumnsProps {
   columnMenuExtra?: React.ReactNode;
   // 컬럼 하단 빠른 추가 바 (풀보드 전용).
   quickAdd?: boolean;
+  // 컬럼 헤더의 손잡이로 컬럼 순서를 드래그 변경할 수 있게 한다 (풀보드 전용).
+  columnReorder?: boolean;
+  // 한 행(컬럼 줄) 최소 높이(px). 이 아래로는 안 줄고, 넘치면 컨테이너가 스크롤된다.
+  minRowHeight?: number;
+}
+
+// useSortable에 쓰는 컬럼 id. ColumnView가 이미 id=column.id로 useDroppable을
+// 등록하므로 충돌을 피하려고 접두어를 붙인다.
+const COLUMN_SORT_PREFIX = "column:";
+
+// 컬럼 순서 변경용 래퍼. 헤더에 넣을 드래그 손잡이를 ColumnView에 넘긴다.
+function SortableColumn({
+  column,
+  cards,
+  onOpenCard,
+  onOpenCreate,
+  isDragging,
+  quickAdd,
+}: {
+  column: Column;
+  cards: Card[];
+  onOpenCard: (cardId: string) => void;
+  onOpenCreate: (columnId: string) => void;
+  isDragging: boolean;
+  quickAdd?: boolean;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging: isColumnDragging,
+  } = useSortable({
+    id: COLUMN_SORT_PREFIX + column.id,
+    data: { type: "column", columnId: column.id },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={`grid min-h-0 min-w-0 ${isColumnDragging ? "opacity-40" : ""}`}
+    >
+      <ColumnView
+        column={column}
+        cards={cards}
+        onOpenCard={onOpenCard}
+        onOpenCreate={onOpenCreate}
+        isDragging={isDragging}
+        quickAdd={quickAdd}
+        dragHandle={
+          <button
+            type="button"
+            aria-label="컬럼 위치 이동"
+            className="shrink-0 cursor-grab touch-none rounded px-1 text-muted-foreground hover:text-foreground active:cursor-grabbing"
+            {...attributes}
+            {...listeners}
+          >
+            ⠿
+          </button>
+        }
+      />
+    </div>
+  );
 }
 
 // 컬럼 그리드 + 카드 드래그 앤 드롭. 풀보드와 위젯이 공유한다.
@@ -95,9 +169,13 @@ export function BoardColumns({
   columnClassName,
   columnMenuExtra,
   quickAdd,
+  columnReorder,
+  minRowHeight = FULLBOARD_MIN_ROW_HEIGHT,
 }: BoardColumnsProps) {
   const moveCard = useBoardStore((s) => s.moveCard);
+  const moveColumn = useBoardStore((s) => s.moveColumn);
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
+  const [activeColumnId, setActiveColumnId] = useState<string | null>(null);
   const [pendingLeaveDone, setPendingLeaveDone] =
     useState<PendingLeaveDone | null>(null);
   // 드래그 시작 시점의 카드 위치. 미리보기 이동 뒤 원위치로 되돌리거나, 완료 컬럼
@@ -123,7 +201,55 @@ export function BoardColumns({
     [activeCardId, board],
   );
 
+  const activeColumn = useMemo<Column | null>(
+    () =>
+      activeColumnId
+        ? (board.columns.find((c) => c.id === activeColumnId) ?? null)
+        : null,
+    [activeColumnId, board],
+  );
+
+  // 드래그 대상이 컬럼(순서 변경)인지.
+  function isColumnDrag(event: {
+    active: { data: { current?: Record<string, unknown> } };
+  }): boolean {
+    return event.active.data.current?.type === "column";
+  }
+
+  // over 위치에서 대상 컬럼 id를 뽑는다 (컬럼/섹션/카드 어느 것 위든).
+  function columnIdFromOver(
+    overId: string,
+    overData: Record<string, unknown> | undefined,
+  ): string | undefined {
+    const t = overData?.type as string | undefined;
+    if (t === "column" || t === "section") {
+      return (overData?.columnId as string | undefined) ?? overId;
+    }
+    return findColumnIdOfCard(board, overId);
+  }
+
+  // 컬럼 순서 드래그 확정.
+  function handleColumnDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    const activeColId = active.data.current?.columnId as string | undefined;
+    setActiveColumnId(null);
+    if (!over || !activeColId) return;
+    const overColId = columnIdFromOver(
+      String(over.id),
+      over.data.current as Record<string, unknown> | undefined,
+    );
+    if (!overColId || overColId === activeColId) return;
+    const toIndex = board.columns.findIndex((c) => c.id === overColId);
+    if (toIndex === -1) return;
+    moveColumn(activeColId, toIndex);
+  }
+
   function handleDragStart(event: DragStartEvent) {
+    // 컬럼 순서 드래그는 카드 로직을 건너뛴다.
+    if (isColumnDrag(event)) {
+      setActiveColumnId(event.active.data.current?.columnId as string);
+      return;
+    }
     const activeId = String(event.active.id);
     setActiveCardId(activeId);
     const columnId = findColumnIdOfCard(board, activeId);
@@ -144,6 +270,8 @@ export function BoardColumns({
   // 위를 잠깐 지나가는 것만으로 완료 처리되지 않게).
   function handleDragOver(event: DragOverEvent) {
     const { active, over } = event;
+    // 컬럼 순서 드래그는 미리보기 이동 없이 dragEnd에서만 확정한다.
+    if (isColumnDrag(event)) return;
     if (!over) return;
     const activeId = String(active.id);
     const fromColumnId = findColumnIdOfCard(board, activeId);
@@ -171,6 +299,10 @@ export function BoardColumns({
 
   // 드롭 확정: 실제 출발점(dragOrigin) 기준으로 완료 처리·경고를 판단한다.
   function handleDragEnd(event: DragEndEvent) {
+    if (isColumnDrag(event)) {
+      handleColumnDragEnd(event);
+      return;
+    }
     const { active, over } = event;
     setActiveCardId(null);
     const activeId = String(active.id);
@@ -242,6 +374,56 @@ export function BoardColumns({
     });
   }
 
+  const columnNodes = board.columns.map((column) => {
+    const cards = column.cardIds
+      .map((id) => board.cards[id])
+      .filter((card): card is Card => Boolean(card));
+    if (columnReorder) {
+      return (
+        <SortableColumn
+          key={column.id}
+          column={column}
+          cards={cards}
+          onOpenCard={onOpenCard}
+          onOpenCreate={onOpenCreate}
+          isDragging={activeCardId !== null}
+          quickAdd={quickAdd}
+        />
+      );
+    }
+    return (
+      <ColumnView
+        key={column.id}
+        column={column}
+        cards={cards}
+        onOpenCard={onOpenCard}
+        onOpenCreate={onOpenCreate}
+        className={columnClassName}
+        columnMenuExtra={columnMenuExtra}
+        isDragging={activeCardId !== null}
+        quickAdd={quickAdd}
+      />
+    );
+  });
+
+  const grid = (
+    <div
+      className="grid min-h-0 flex-1 gap-3 overflow-y-auto pb-2"
+      style={columnGridStyle(minRowHeight)}
+    >
+      {columnReorder ? (
+        <SortableContext
+          items={board.columns.map((c) => COLUMN_SORT_PREFIX + c.id)}
+          strategy={horizontalListSortingStrategy}
+        >
+          {columnNodes}
+        </SortableContext>
+      ) : (
+        columnNodes
+      )}
+    </div>
+  );
+
   return (
     <>
     <DndContext
@@ -251,38 +433,31 @@ export function BoardColumns({
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
       onDragCancel={(event) => {
+        if (isColumnDrag(event)) {
+          setActiveColumnId(null);
+          return;
+        }
         setActiveCardId(null);
         snapBackToOrigin(String(event.active.id), dragOriginRef.current);
         dragOriginRef.current = null;
       }}
     >
       {/* 넓으면 한 줄에 나눠 채우고, 좁으면 아랫줄로 접히는 그리드 (가로 스크롤 없음) */}
-      <div
-        className="grid min-h-0 flex-1 gap-3 overflow-y-auto pb-2"
-        style={COLUMN_GRID_STYLE}
-      >
-        {board.columns.map((column) => {
-          const cards = column.cardIds
-            .map((id) => board.cards[id])
-            .filter((card): card is Card => Boolean(card));
-          return (
-            <ColumnView
-              key={column.id}
-              column={column}
-              cards={cards}
-              onOpenCard={onOpenCard}
-              onOpenCreate={onOpenCreate}
-              className={columnClassName}
-              columnMenuExtra={columnMenuExtra}
-              isDragging={activeCardId !== null}
-              quickAdd={quickAdd}
-            />
-          );
-        })}
-      </div>
+      {grid}
 
       <DragOverlay>
-        {activeCard ? <CardView card={activeCard} /> : null}
+        {activeColumn ? (
+          <div className="flex flex-col gap-2 rounded-lg bg-muted p-2 opacity-95 shadow-xl ring-1 ring-border">
+            <div className="px-1 text-sm font-semibold">
+              {activeColumn.title}
+              <span className="ml-1 text-xs font-normal text-muted-foreground">
+                {activeColumn.cardIds.length}
+              </span>
+            </div>
+          </div>
+        ) : activeCard ? (
+          <CardView card={activeCard} />
+        ) : null}
       </DragOverlay>
     </DndContext>
 

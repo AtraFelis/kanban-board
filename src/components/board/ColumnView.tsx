@@ -4,7 +4,6 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { ask } from "@tauri-apps/plugin-dialog";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -39,6 +38,8 @@ interface ColumnViewProps {
   isDragging?: boolean;
   // 컬럼 하단에 제목만 입력하는 빠른 추가 바를 보여준다 (풀보드 전용).
   quickAdd?: boolean;
+  // 컬럼 순서 변경용 드래그 손잡이. 있으면 헤더 앞에 렌더한다 (풀보드 전용).
+  dragHandle?: React.ReactNode;
 }
 
 interface DateGroup {
@@ -78,6 +79,7 @@ export function ColumnView({
   columnMenuExtra,
   isDragging,
   quickAdd,
+  dragHandle,
 }: ColumnViewProps) {
   const renameColumn = useBoardStore((s) => s.renameColumn);
   const removeColumn = useBoardStore((s) => s.removeColumn);
@@ -113,6 +115,8 @@ export function ColumnView({
     label: string;
     cardIds: string[];
   } | null>(null);
+  // 컬럼 삭제 확인 팝업.
+  const [deleteOpen, setDeleteOpen] = useState(false);
   // 완료 날짜 그룹 / '미분류' 그룹의 접힘 상태. 영속화하지 않는다.
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(
     {},
@@ -121,7 +125,7 @@ export function ColumnView({
   // 빈 컬럼에도 카드를 떨어뜨릴 수 있도록 컬럼 자체를 드롭 대상으로 등록.
   const { setNodeRef, isOver } = useDroppable({
     id: column.id,
-    data: { type: "column" },
+    data: { type: "column", columnId: column.id },
   });
 
   function startRename() {
@@ -157,12 +161,8 @@ export function ColumnView({
     setQuickAddDraft("");
   }
 
-  async function confirmDelete() {
-    const ok = await ask(
-      `"${column.title}" 컬럼을 삭제하면 이 컬럼의 카드도 모두 삭제됩니다.\n계속할까요?`,
-      { title: "컬럼 삭제", kind: "warning", okLabel: "삭제", cancelLabel: "취소" },
-    );
-    if (ok) removeColumn(column.id);
+  function confirmDelete() {
+    setDeleteOpen(true);
   }
 
   return (
@@ -184,6 +184,7 @@ export function ColumnView({
       }}
     >
       <div className="flex items-center gap-1">
+        {dragHandle}
         {isEditingTitle ? (
           <Input
             autoFocus
@@ -392,6 +393,19 @@ export function ColumnView({
           </form>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={deleteOpen}
+        title="컬럼 삭제"
+        description={`"${column.title}" 컬럼을 삭제하면 이 컬럼의 카드도 모두 삭제됩니다.`}
+        confirmLabel="삭제"
+        destructive
+        onConfirm={() => {
+          removeColumn(column.id);
+          setDeleteOpen(false);
+        }}
+        onCancel={() => setDeleteOpen(false)}
+      />
 
       <ConfirmDialog
         open={pendingArchive !== null}
