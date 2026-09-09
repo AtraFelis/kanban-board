@@ -217,6 +217,16 @@ export function ColumnView({
           variant="ghost"
           size="icon"
           className="size-7"
+          aria-label="카드 추가"
+          onClick={() => onOpenCreate(column.id)}
+        >
+          +
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-7"
           aria-label="컬럼 삭제"
           onClick={confirmDelete}
         >
