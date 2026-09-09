@@ -10,7 +10,7 @@ const COLUMN_MIN_WIDTH = "240px";
 
 // 풀보드/위젯 각각의 한 행 최소 높이(px). 이 아래로는 컬럼이 찌부되지 않는다.
 export const FULLBOARD_MIN_ROW_HEIGHT = 340;
-export const WIDGET_MIN_ROW_HEIGHT = 400;
+export const WIDGET_MIN_ROW_HEIGHT = 600;
 
 export function columnGridStyle(minRowHeight: number): CSSProperties {
   return {
