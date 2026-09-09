@@ -3,6 +3,7 @@ import {
   DndContext,
   DragOverlay,
   KeyboardSensor,
+  MeasuringStrategy,
   PointerSensor,
   closestCorners,
   useSensor,
@@ -429,6 +430,9 @@ export function BoardColumns({
     <DndContext
       sensors={sensors}
       collisionDetection={closestCorners}
+      // 가로 페이지 컬럼에서 자동 스크롤로 페이지를 넘긴 뒤에도 드롭 대상 좌표가
+      // 맞도록 드래그 중 droppable을 계속 다시 잰다.
+      measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
