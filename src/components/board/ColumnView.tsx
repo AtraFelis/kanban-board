@@ -4,7 +4,6 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { ask } from "@tauri-apps/plugin-dialog";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -116,6 +115,8 @@ export function ColumnView({
     label: string;
     cardIds: string[];
   } | null>(null);
+  // 컬럼 삭제 확인 팝업.
+  const [deleteOpen, setDeleteOpen] = useState(false);
   // 완료 날짜 그룹 / '미분류' 그룹의 접힘 상태. 영속화하지 않는다.
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(
     {},
@@ -160,12 +161,8 @@ export function ColumnView({
     setQuickAddDraft("");
   }
 
-  async function confirmDelete() {
-    const ok = await ask(
-      `"${column.title}" 컬럼을 삭제하면 이 컬럼의 카드도 모두 삭제됩니다.\n계속할까요?`,
-      { title: "컬럼 삭제", kind: "warning", okLabel: "삭제", cancelLabel: "취소" },
-    );
-    if (ok) removeColumn(column.id);
+  function confirmDelete() {
+    setDeleteOpen(true);
   }
 
   return (
@@ -396,6 +393,19 @@ export function ColumnView({
           </form>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={deleteOpen}
+        title="컬럼 삭제"
+        description={`"${column.title}" 컬럼을 삭제하면 이 컬럼의 카드도 모두 삭제됩니다.`}
+        confirmLabel="삭제"
+        destructive
+        onConfirm={() => {
+          removeColumn(column.id);
+          setDeleteOpen(false);
+        }}
+        onCancel={() => setDeleteOpen(false)}
+      />
 
       <ConfirmDialog
         open={pendingArchive !== null}
