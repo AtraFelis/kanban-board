@@ -99,6 +99,18 @@ export function ColumnCardPages({
     scheduleRecalc();
   }, [recalcKey, isDragging, scheduleRecalc]);
 
+  // 드래그가 끝나면 현재 페이지 위치로 스냅 + 재계산. (드래그 도중 스크롤이
+  // 어긋났거나 카드 수가 바뀌었을 수 있음)
+  const wasDragging = useRef(false);
+  useEffect(() => {
+    if (wasDragging.current && !isDragging) {
+      const el = scrollRef.current;
+      if (el && el.clientWidth) el.scrollLeft = page * el.clientWidth;
+      scheduleRecalc();
+    }
+    wasDragging.current = !!isDragging;
+  }, [isDragging, page, scheduleRecalc]);
+
   // 컨테이너 크기 변화 → 재계산 예약.
   useEffect(() => {
     const el = scrollRef.current;
@@ -118,6 +130,7 @@ export function ColumnCardPages({
 
   // 자유 스크롤(트랙패드 등)로 페이지가 바뀌면 점 표시를 맞춘다.
   function syncPageFromScroll() {
+    if (isDragging) return; // 드래그 중 스크롤 이벤트로 상태를 건드리지 않는다
     const el = scrollRef.current;
     if (!el || el.clientWidth === 0) return;
     if (Date.now() < wheelLockUntil.current) return; // 휠 애니메이션 중엔 무시
@@ -151,8 +164,10 @@ export function ColumnCardPages({
         onDoubleClick={(e) => {
           if (e.target === e.currentTarget) onAddCard();
         }}
-        // overflow-x:auto라야 부드러운 scrollTo가 먹는다. 스크롤바는 숨긴다.
-        className="min-h-0 flex-1 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        // overflow-x:hidden — 드래그 중 @dnd-kit 자동 스크롤이 이 컨테이너를 페이지
+        // 중간에 멈춰 세우지 못하게 한다. 페이지 이동은 전적으로 goTo()가 담당
+        // (scrollLeft 직접 대입은 overflow:hidden에서도 먹는다).
+        className="min-h-0 flex-1 overflow-hidden"
         style={
           pageWidth
             ? { columnWidth: `${pageWidth}px`, columnGap: 0 }
