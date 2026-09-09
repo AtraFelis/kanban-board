@@ -78,11 +78,18 @@ export function ColumnCardPages({
   }, []);
 
   // 페이지 폭·개수를 다시 잰다. 값이 바뀔 때만 상태 갱신(렌더 루프 방지).
+  // 창이 리사이즈/가려지는 순간 clientWidth가 0이나 아주 작은 값으로 튀면
+  // pageCount가 폭주(다단 → scrollWidth 폭발 → 점 수천 개)해 위젯이 크래시할 수
+  // 있으므로, 말이 안 되는 폭은 무시하고 개수도 상한을 둔다.
   const recalc = useCallback(() => {
     const el = scrollRef.current;
-    if (!el || el.clientWidth === 0) return;
+    if (!el) return;
     const w = el.clientWidth;
-    const count = Math.max(1, Math.ceil((el.scrollWidth - 1) / w));
+    if (w < 120) return;
+    const count = Math.min(
+      40,
+      Math.max(1, Math.ceil((el.scrollWidth - 1) / w)),
+    );
     setPageWidth((prev) => (prev === w ? prev : w));
     setPageCount((prev) => (prev === count ? prev : count));
     setPage((prev) => (prev <= count - 1 ? prev : count - 1));
