@@ -50,7 +50,7 @@ export function CardFields({
   }
 
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-5">
       <label className="grid gap-1 text-sm">
         <span className="font-medium">제목</span>
         <Input
@@ -111,7 +111,7 @@ export function CardFields({
         onChange={(checklist) => onChange({ checklist })}
       />
 
-      <div className="grid gap-1 text-sm">
+      <div className="grid gap-2 text-sm">
         <span className="font-medium">태그</span>
         {value.labels.length > 0 && (
           <div className="flex flex-wrap items-center gap-1">
@@ -195,7 +195,7 @@ export function CardFields({
         </div>
       </div>
 
-      <div className="grid gap-1 text-sm">
+      <div className="grid gap-2 text-sm">
         <span className="font-medium">카드 색</span>
         <div className="flex items-center gap-2">
           <input

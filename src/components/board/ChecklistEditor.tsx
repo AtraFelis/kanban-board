@@ -66,7 +66,7 @@ export function ChecklistEditor({ items, onChange }: ChecklistEditorProps) {
   }
 
   return (
-    <div className="grid gap-1 text-sm">
+    <div className="grid gap-2 text-sm">
       <span className="font-medium">
         체크리스트{" "}
         <span className="font-normal text-muted-foreground">
@@ -83,7 +83,7 @@ export function ChecklistEditor({ items, onChange }: ChecklistEditorProps) {
           items={items.map((i) => i.id)}
           strategy={verticalListSortingStrategy}
         >
-          <ul className="grid gap-0.5">
+          <ul className="grid gap-1">
             {items.map((item) => (
               <ChecklistRow
                 key={item.id}
@@ -143,7 +143,7 @@ function ChecklistRow({ item, onToggle, onRemove }: ChecklistRowProps) {
     <li
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`group/row flex items-center gap-2 rounded px-1 py-0.5 hover:bg-accent ${
+      className={`group/row flex items-center gap-2 rounded px-1 py-1 hover:bg-accent ${
         isDragging ? "relative z-10 bg-accent opacity-80" : ""
       }`}
     >
