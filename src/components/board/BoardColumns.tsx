@@ -182,6 +182,32 @@ export function BoardColumns({
   // 진입/이탈 여부를 판단할 때 "실제 출발점"으로 쓴다.
   type DragOrigin = { columnId: string; index: number; sectionId: string | null };
   const dragOriginRef = useRef<DragOrigin | null>(null);
+  // 보드 그리드 영역. 드래그 포인터가 이 밖이면 미리보기 이동을 하지 않는다.
+  const gridRef = useRef<HTMLDivElement>(null);
+  // 마지막으로 적용한 미리보기 대상 시그니처. 같은 값이면 moveCard를 반복하지 않는다.
+  const lastPreviewSigRef = useRef<string | null>(null);
+
+  // 드래그 포인터의 현재 화면 좌표 (activatorEvent + delta). 마우스/포인터 드래그만.
+  function dragPointer(event: {
+    activatorEvent: Event;
+    delta: { x: number; y: number };
+  }): { x: number; y: number } | null {
+    const a = event.activatorEvent;
+    if (!(a instanceof MouseEvent)) return null;
+    return { x: a.clientX + event.delta.x, y: a.clientY + event.delta.y };
+  }
+
+  // 포인터가 보드 그리드 밖(창 밖 포함)에 있는지. 좌표를 못 구하면 false(안쪽 취급).
+  function pointerOutsideBoard(event: {
+    activatorEvent: Event;
+    delta: { x: number; y: number };
+  }): boolean {
+    const p = dragPointer(event);
+    const el = gridRef.current;
+    if (!p || !el) return false;
+    const r = el.getBoundingClientRect();
+    return p.x < r.left || p.x > r.right || p.y < r.top || p.y > r.bottom;
+  }
 
   function snapBackToOrigin(cardId: string, origin: DragOrigin | null) {
     if (!origin) return;
@@ -252,6 +278,7 @@ export function BoardColumns({
     }
     const activeId = String(event.active.id);
     setActiveCardId(activeId);
+    lastPreviewSigRef.current = null;
     const columnId = findColumnIdOfCard(board, activeId);
     const column = columnId
       ? board.columns.find((c) => c.id === columnId)
@@ -273,6 +300,9 @@ export function BoardColumns({
     // 컬럼 순서 드래그는 미리보기 이동 없이 dragEnd에서만 확정한다.
     if (isColumnDrag(event)) return;
     if (!over) return;
+    // 포인터가 보드 밖(창 밖 등)이면 미리보기 이동을 하지 않는다. closestCorners가
+    // 반환한 먼 대상으로 카드를 왕복시키며 매 프레임 전체 리렌더 → 크래시를 막는다.
+    if (pointerOutsideBoard(event)) return;
     const activeId = String(active.id);
     const fromColumnId = findColumnIdOfCard(board, activeId);
     const target = resolveDropTarget(
@@ -291,6 +321,10 @@ export function BoardColumns({
       const curSection = board.cards[activeId]?.sectionId ?? null;
       if (curSection === (target.sectionId ?? null)) return;
     }
+    // 같은 대상으로 반복 moveCard 하지 않는다 (포인터 정지 시 storm 방지).
+    const sig = `${target.columnId}|${target.index}|${target.sectionId ?? "-"}`;
+    if (sig === lastPreviewSigRef.current) return;
+    lastPreviewSigRef.current = sig;
     moveCard(activeId, target.columnId, target.index, {
       sectionId: target.sectionId,
       skipCompletion: true,
@@ -308,8 +342,10 @@ export function BoardColumns({
     const activeId = String(active.id);
     const origin = dragOriginRef.current;
     dragOriginRef.current = null;
+    lastPreviewSigRef.current = null;
 
-    if (!over) {
+    // 보드 밖에 놓으면(창 밖 등) 취소로 보고 원위치.
+    if (!over || pointerOutsideBoard(event)) {
       snapBackToOrigin(activeId, origin);
       return;
     }
@@ -408,6 +444,7 @@ export function BoardColumns({
 
   const grid = (
     <div
+      ref={gridRef}
       className="grid min-h-0 flex-1 gap-3 overflow-y-auto pb-2"
       style={columnGridStyle(minRowHeight)}
     >
@@ -433,6 +470,7 @@ export function BoardColumns({
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
       onDragCancel={(event) => {
+        lastPreviewSigRef.current = null;
         if (isColumnDrag(event)) {
           setActiveColumnId(null);
           return;
