@@ -1,13 +1,12 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { createId } from "@/lib/id";
 import { allLabels } from "@/lib/labels";
 import { useBoardStore } from "@/store/boardStore";
 
 import { CARD_TITLE_MAX, type CardFormValue } from "./cardForm";
+import { ChecklistEditor } from "./ChecklistEditor";
 
 // 자동완성 후보를 한 번에 보여줄 최대 개수.
 const TAG_SUGGEST_LIMIT = 6;
@@ -19,7 +18,7 @@ interface CardFieldsProps {
   showCompletedAt?: boolean;
 }
 
-// 제목·설명·시작일·마감일(·완료일)·색·태그·체크리스트 입력 묶음. value/onChange로
+// 제목·설명·시작일·마감일(·완료일)·체크리스트·태그·카드 색 입력 묶음. value/onChange로
 // 동작하되, 태그 자동완성 목록만 스토어에서 파생한다.
 export function CardFields({
   value,
@@ -29,9 +28,6 @@ export function CardFields({
   const [tagDraft, setTagDraft] = useState("");
   const [tagSuggestOpen, setTagSuggestOpen] = useState(false);
   const [activeTagIndex, setActiveTagIndex] = useState(-1);
-  const [checklistDraft, setChecklistDraft] = useState("");
-  // 체크리스트가 길어져도 입력칸이 화면 밖으로 밀리지 않게, 추가 후 다시 보이게 스크롤한다.
-  const checklistAddRef = useRef<HTMLDivElement>(null);
 
   const board = useBoardStore((s) => s.board);
   const knownTags = useMemo(() => (board ? allLabels(board) : []), [board]);
@@ -52,32 +48,6 @@ export function CardFields({
     if (!tag || value.labels.includes(tag)) return;
     onChange({ labels: [...value.labels, tag] });
   }
-
-  function addChecklistItem() {
-    const text = checklistDraft.trim();
-    if (!text) return;
-    onChange({
-      checklist: [...value.checklist, { id: createId(), text, done: false }],
-    });
-    setChecklistDraft("");
-    // 새 항목이 렌더된 다음 프레임에 입력칸을 다시 보이게 (타자기 스크롤).
-    setTimeout(
-      () => checklistAddRef.current?.scrollIntoView({ block: "nearest" }),
-      0,
-    );
-  }
-
-  // 체크리스트 항목을 위(delta=-1)/아래(delta=+1)로 한 칸 옮긴다. 범위를 벗어나면 무시.
-  function moveChecklistItem(index: number, delta: number) {
-    const next = index + delta;
-    if (next < 0 || next >= value.checklist.length) return;
-    const reordered = [...value.checklist];
-    const [moved] = reordered.splice(index, 1);
-    reordered.splice(next, 0, moved);
-    onChange({ checklist: reordered });
-  }
-
-  const doneCount = value.checklist.filter((i) => i.done).length;
 
   return (
     <div className="grid gap-4">
@@ -136,25 +106,10 @@ export function CardFields({
         )}
       </div>
 
-      <div className="grid gap-1 text-sm">
-        <span className="font-medium">카드 색</span>
-        <div className="flex items-center gap-2">
-          <input
-            type="color"
-            value={value.color || "#ffffff"}
-            onChange={(e) => onChange({ color: e.target.value })}
-            className="size-8 rounded border bg-transparent"
-          />
-          <button
-            type="button"
-            onClick={() => onChange({ color: "" })}
-            disabled={!value.color}
-            className="rounded px-2 py-1 text-xs text-muted-foreground hover:bg-accent disabled:opacity-50"
-          >
-            기본색
-          </button>
-        </div>
-      </div>
+      <ChecklistEditor
+        items={value.checklist}
+        onChange={(checklist) => onChange({ checklist })}
+      />
 
       <div className="grid gap-1 text-sm">
         <span className="font-medium">태그</span>
@@ -241,97 +196,22 @@ export function CardFields({
       </div>
 
       <div className="grid gap-1 text-sm">
-        <span className="font-medium">
-          체크리스트{" "}
-          <span className="font-normal text-muted-foreground">
-            {doneCount}/{value.checklist.length}
-          </span>
-        </span>
-        <ul className="grid gap-0.5">
-          {value.checklist.map((item, index) => (
-            <li
-              key={item.id}
-              className="group/row flex items-center gap-2 rounded px-1 py-0.5 hover:bg-accent"
-            >
-              <input
-                type="checkbox"
-                checked={item.done}
-                onChange={() =>
-                  onChange({
-                    checklist: value.checklist.map((i) =>
-                      i.id === item.id ? { ...i, done: !i.done } : i,
-                    ),
-                  })
-                }
-                className="size-3.5 shrink-0"
-              />
-              <span
-                className={
-                  item.done
-                    ? "flex-1 text-muted-foreground line-through"
-                    : "flex-1"
-                }
-              >
-                {item.text}
-              </span>
-              {/* 순서 이동·삭제: 행에 마우스를 올렸을 때만 보인다 */}
-              <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover/row:opacity-100 focus-within:opacity-100">
-                <button
-                  type="button"
-                  aria-label="위로 이동"
-                  disabled={index === 0}
-                  onClick={() => moveChecklistItem(index, -1)}
-                  className="px-0.5 text-muted-foreground hover:text-foreground disabled:opacity-30"
-                >
-                  ↑
-                </button>
-                <button
-                  type="button"
-                  aria-label="아래로 이동"
-                  disabled={index === value.checklist.length - 1}
-                  onClick={() => moveChecklistItem(index, 1)}
-                  className="px-0.5 text-muted-foreground hover:text-foreground disabled:opacity-30"
-                >
-                  ↓
-                </button>
-                <button
-                  type="button"
-                  aria-label="항목 삭제"
-                  onClick={() =>
-                    onChange({
-                      checklist: value.checklist.filter((i) => i.id !== item.id),
-                    })
-                  }
-                  className="px-0.5 text-muted-foreground hover:text-destructive"
-                >
-                  ✕
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-        {/* scroll-mb: 타자기 스크롤로 이 행을 보이게 할 때 하단에 여유를 둔다 */}
-        <div ref={checklistAddRef} className="flex scroll-mb-6 gap-1">
-          <Input
-            value={checklistDraft}
-            onChange={(e) => setChecklistDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                addChecklistItem();
-              }
-            }}
-            placeholder="+ 항목 추가"
-            className="h-8"
+        <span className="font-medium">카드 색</span>
+        <div className="flex items-center gap-2">
+          <input
+            type="color"
+            value={value.color || "#ffffff"}
+            onChange={(e) => onChange({ color: e.target.value })}
+            className="size-8 rounded border bg-transparent"
           />
-          <Button
+          <button
             type="button"
-            size="sm"
-            onClick={addChecklistItem}
-            disabled={!checklistDraft.trim()}
+            onClick={() => onChange({ color: "" })}
+            disabled={!value.color}
+            className="rounded px-2 py-1 text-xs text-muted-foreground hover:bg-accent disabled:opacity-50"
           >
-            추가
-          </Button>
+            기본색
+          </button>
         </div>
       </div>
     </div>
