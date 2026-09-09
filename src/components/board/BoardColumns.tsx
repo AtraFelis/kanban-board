@@ -430,9 +430,12 @@ export function BoardColumns({
     <DndContext
       sensors={sensors}
       collisionDetection={closestCorners}
-      // 가로 페이지 컬럼에서 자동 스크롤로 페이지를 넘긴 뒤에도 드롭 대상 좌표가
-      // 맞도록 드래그 중 droppable을 계속 다시 잰다.
+      // 페이지 넘긴 뒤에도 드롭 대상 좌표가 맞도록 드래그 중 droppable을 다시 잰다.
       measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
+      // 가로 페이지 컨테이너에는 자동 스크롤을 끈다. 자동 스크롤이 페이지 중간에
+      // 멈춰 세우면 렌더가 폭주해 위젯이 크래시한다. 페이지 이동은 ColumnCardPages가
+      // 가장자리 감지로 페이지 단위 goTo만 한다.
+      autoScroll={{ canScroll: (el) => !el.hasAttribute("data-column-pages") }}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
