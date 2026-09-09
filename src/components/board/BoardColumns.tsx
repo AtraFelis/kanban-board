@@ -3,7 +3,6 @@ import {
   DndContext,
   DragOverlay,
   KeyboardSensor,
-  MeasuringStrategy,
   PointerSensor,
   closestCorners,
   useSensor,
@@ -430,12 +429,11 @@ export function BoardColumns({
     <DndContext
       sensors={sensors}
       collisionDetection={closestCorners}
-      // 페이지 넘긴 뒤에도 드롭 대상 좌표가 맞도록 드래그 중 droppable을 다시 잰다.
-      measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
-      // 가로 페이지 컨테이너에는 자동 스크롤을 끈다. 자동 스크롤이 페이지 중간에
-      // 멈춰 세우면 렌더가 폭주해 위젯이 크래시한다. 페이지 이동은 ColumnCardPages가
-      // 가장자리 감지로 페이지 단위 goTo만 한다.
-      autoScroll={{ canScroll: (el) => !el.hasAttribute("data-column-pages") }}
+      // 자동 스크롤은 끈다. (1) 가로 페이지 컨테이너를 중간에 멈춰 세우면 크래시,
+      // (2) 커서를 창 밖으로 끌면 rAF 스크롤 루프가 폭주해 위젯이 튕긴다.
+      // 페이지 이동은 ColumnCardPages가 가장자리 감지로 페이지 단위 goTo만 한다.
+      // 넘긴 뒤 드롭 좌표는 goTo의 scrollLeft 변화를 @dnd-kit이 추적해 다시 잰다.
+      autoScroll={false}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}

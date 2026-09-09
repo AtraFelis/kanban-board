@@ -146,7 +146,7 @@ export function ColumnCardPages({
     return () => el.removeEventListener("wheel", onWheel);
   }, [page, pageCount, goTo]);
 
-  // 드래그 중 커서가 컨테이너 좌/우 가장자리에 닿으면 페이지를 한 장 넘긴다.
+  // 드래그 중 커서가 컨테이너 좌/우 가장자리 근처에 오면 페이지를 한 장 넘긴다.
   // document의 실제 pointermove를 보므로 @dnd-kit 이벤트 주기에 의존하지 않는다.
   useEffect(() => {
     if (!isDragging || pageCount <= 1) return;
@@ -155,7 +155,10 @@ export function ColumnCardPages({
       const el = scrollRef.current;
       if (!el) return;
       const box = el.getBoundingClientRect();
-      if (e.clientY < box.top - 40 || e.clientY > box.bottom + 40) return;
+      // 커서가 컨테이너에서 크게 벗어나면(창 밖 등) 무시 — 가장자리 근처에서만.
+      const M = 80;
+      if (e.clientY < box.top - M || e.clientY > box.bottom + M) return;
+      if (e.clientX < box.left - M || e.clientX > box.right + M) return;
       const now = Date.now();
       if (now < dragFlipLock.current) return;
       if (e.clientX > box.right - DRAG_FLIP_EDGE_PX && page < pageCount - 1) {
