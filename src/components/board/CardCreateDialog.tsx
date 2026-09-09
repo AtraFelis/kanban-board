@@ -7,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { todayISODate } from "@/lib/date";
 import { useBoardStore } from "@/store/boardStore";
 
 import { CardFields } from "./CardFields";
@@ -55,7 +56,10 @@ function CardCreateForm({
 
   function submit() {
     if (!draft.title.trim()) return;
-    addCard(columnId, cardFormToInput(draft));
+    const input = cardFormToInput(draft);
+    // 시작일을 기본값(오늘)에서 안 바꿨으면 비워서 실제 생성 시각(now)이 기록되게 한다.
+    if (draft.createdAt === todayISODate()) input.createdAt = undefined;
+    addCard(columnId, input);
     onClose();
   }
 

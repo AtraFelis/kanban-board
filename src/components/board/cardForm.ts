@@ -1,4 +1,4 @@
-import { isoFromLocalDate, toISODate } from "@/lib/date";
+import { isoFromLocalDate, todayISODate, toISODate } from "@/lib/date";
 import { type Card, type ChecklistItem } from "@/types";
 
 // 카드 제목 최대 길이. 입력창 maxLength + 저장 시 방어적으로 자른다.
@@ -23,7 +23,9 @@ export function emptyCardForm(): CardFormValue {
     title: "",
     description: "",
     dueDate: "",
-    createdAt: "",
+    // 생성 폼은 시작일 기본값으로 오늘을 채워 보여준다. 그대로 두면 CardCreateForm이
+    // 다시 비워서 실제 생성 시각(now)이 기록되게 한다.
+    createdAt: todayISODate(),
     completedAt: "",
     labels: [],
     checklist: [],
