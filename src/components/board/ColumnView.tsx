@@ -325,49 +325,69 @@ export function ColumnView({
             )}
           </>
         ) : useSections ? (
-          // 섹션이 있는 컬럼은 세로 스크롤 (섹션 그룹은 페이지로 나누기 복잡 + 접기로 완화).
-          <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
-            {(uncategorizedCards.length > 0 || isDragging) && (
-              <ColumnSectionGroup
-                columnId={column.id}
-                section={null}
-                cards={uncategorizedCards}
-                collapsed={collapsedGroups[UNCATEGORIZED_KEY] ?? false}
-                onToggleCollapsed={() =>
-                  setCollapsedGroups((m) => ({
-                    ...m,
-                    [UNCATEGORIZED_KEY]: !(m[UNCATEGORIZED_KEY] ?? false),
-                  }))
-                }
-                onOpenCard={onOpenCard}
-              />
-            )}
-            {sectionList.map((s) => (
-              <ColumnSectionGroup
-                key={s.id}
-                columnId={column.id}
-                section={s}
-                cards={sortedCards.filter((c) => c.sectionId === s.id)}
-                collapsed={!!s.collapsed}
-                onToggleCollapsed={() =>
-                  toggleSectionCollapsed(column.id, s.id)
-                }
-                onOpenCard={onOpenCard}
-              />
-            ))}
-          </div>
+          <ColumnCardPages
+            onAddCard={() => onOpenCreate(column.id)}
+            isDragging={isDragging}
+            recalcKey={
+              `${sortedCards.length}|${uncategorizedCards.length}|` +
+              `${collapsedGroups[UNCATEGORIZED_KEY] ? 1 : 0}|` +
+              sectionList
+                .map((s) => `${s.id}:${s.collapsed ? 1 : 0}`)
+                .join(",")
+            }
+          >
+            {[
+              uncategorizedCards.length > 0 || isDragging ? (
+                <ColumnSectionGroup
+                  key={UNCATEGORIZED_KEY}
+                  columnId={column.id}
+                  section={null}
+                  cards={uncategorizedCards}
+                  collapsed={collapsedGroups[UNCATEGORIZED_KEY] ?? false}
+                  onToggleCollapsed={() =>
+                    setCollapsedGroups((m) => ({
+                      ...m,
+                      [UNCATEGORIZED_KEY]: !(m[UNCATEGORIZED_KEY] ?? false),
+                    }))
+                  }
+                  onOpenCard={onOpenCard}
+                />
+              ) : null,
+              ...sectionList.map((s) => (
+                <ColumnSectionGroup
+                  key={s.id}
+                  columnId={column.id}
+                  section={s}
+                  cards={sortedCards.filter((c) => c.sectionId === s.id)}
+                  collapsed={!!s.collapsed}
+                  onToggleCollapsed={() =>
+                    toggleSectionCollapsed(column.id, s.id)
+                  }
+                  onOpenCard={onOpenCard}
+                />
+              )),
+            ]}
+          </ColumnCardPages>
         ) : cards.length === 0 ? (
           <p className="pointer-events-none px-1 pt-1 text-xs text-muted-foreground">
             더블클릭하거나 우클릭해서 카드를 추가하세요.
           </p>
         ) : (
-          <ColumnCardPages
-            cards={sortedCards}
-            onOpenCard={onOpenCard}
-            onAddCard={() => onOpenCreate(column.id)}
-            isDragging={isDragging}
-            recalcKey={sortedCards.length}
-          />
+          // SortableContext는 DOM을 안 만들므로 ColumnCardPages의 children은 카드 배열 그대로.
+          <SortableContext
+            items={sortedCards.map((c) => c.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <ColumnCardPages
+              onAddCard={() => onOpenCreate(column.id)}
+              isDragging={isDragging}
+              recalcKey={sortedCards.length}
+            >
+              {sortedCards.map((card) => (
+                <SortableCard key={card.id} card={card} onOpen={onOpenCard} />
+              ))}
+            </ColumnCardPages>
+          </SortableContext>
         )}
       </div>
 
