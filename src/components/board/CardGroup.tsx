@@ -22,8 +22,10 @@ export function CardGroup({
   headerExtra,
 }: CardGroupProps) {
   return (
-    <div className="grid gap-1">
-      <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
+    // 블록 흐름 + margin: 컬럼 가로 페이지(CSS 다단)에서 섹션 카드가 페이지를 넘어
+    // 이어질 수 있게 (grid/flex는 다단에서 조각나지 않는다).
+    <div className="mb-3">
+      <div className="mb-1 flex items-center gap-1 text-xs font-medium break-inside-avoid text-muted-foreground">
         <button
           type="button"
           onClick={onToggle}
@@ -49,7 +51,7 @@ export function CardGroup({
         </div>
         {headerExtra}
       </div>
-      {!collapsed && <div className="grid gap-2">{children}</div>}
+      {!collapsed && <div className="space-y-2">{children}</div>}
     </div>
   );
 }

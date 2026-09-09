@@ -1,14 +1,15 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-
-import type { Card } from "@/types";
-
-import { SortableCard } from "./SortableCard";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 
 interface ColumnCardPagesProps {
-  cards: Card[];
-  onOpenCard: (cardId: string) => void;
-  // 카드 영역 빈 곳 더블클릭 시 카드 추가.
+  // 페이지로 흘려보낼 카드/섹션 내용. 카드 요소에는 break-inside:avoid가 있어야 한다.
+  children: React.ReactNode;
+  // 빈 곳 더블클릭 시 카드 추가.
   onAddCard: () => void;
 }
 
@@ -36,13 +37,9 @@ function animateScrollLeft(el: HTMLElement, to: number) {
 }
 
 // 컬럼의 카드가 세로로 넘칠 때, 스크롤바 대신 스마트폰 홈화면처럼 가로 페이지로 나눈다.
-// CSS 다단(column-width = 컨테이너 폭)으로 카드를 아래로 채우다 넘치면 오른쪽 페이지로 흐른다.
+// CSS 다단(column-width = 컨테이너 폭)으로 내용을 아래로 채우다 넘치면 오른쪽 페이지로 흐른다.
 // 휠 아래로 = 다음 페이지, 위로 = 이전 페이지 (양 끝에서 순환). 하단에 페이지 점 표시.
-export function ColumnCardPages({
-  cards,
-  onOpenCard,
-  onAddCard,
-}: ColumnCardPagesProps) {
+export function ColumnCardPages({ children, onAddCard }: ColumnCardPagesProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [pageWidth, setPageWidth] = useState(0);
   const [pageCount, setPageCount] = useState(1);
@@ -91,10 +88,10 @@ export function ColumnCardPages({
     return () => ro.disconnect();
   }, [recalc]);
 
-  // 카드 수가 바뀌면 렌더 후 페이지 개수 재계산.
+  // 내용(카드 수·섹션 접힘 등)이 바뀌면 렌더 후 페이지 개수 재계산.
   useLayoutEffect(() => {
     recalc();
-  }, [cards.length, pageWidth, recalc]);
+  });
 
   // 휠: 아래로 → 다음, 위로 → 이전. non-passive 리스너라야 preventDefault 가능.
   useEffect(() => {
@@ -130,16 +127,7 @@ export function ColumnCardPages({
             : undefined
         }
       >
-        <SortableContext
-          items={cards.map((c) => c.id)}
-          strategy={verticalListSortingStrategy}
-        >
-          {cards.map((card) => (
-            <div key={card.id} className="mb-2 break-inside-avoid">
-              <SortableCard card={card} onOpen={onOpenCard} />
-            </div>
-          ))}
-        </SortableContext>
+        {children}
       </div>
 
       {pageCount > 1 && (

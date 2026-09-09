@@ -325,7 +325,7 @@ export function ColumnView({
             )}
           </>
         ) : useSections ? (
-          <>
+          <ColumnCardPages onAddCard={() => onOpenCreate(column.id)}>
             {(uncategorizedCards.length > 0 || isDragging) && (
               <ColumnSectionGroup
                 columnId={column.id}
@@ -354,17 +354,28 @@ export function ColumnView({
                 onOpenCard={onOpenCard}
               />
             ))}
-          </>
+          </ColumnCardPages>
         ) : cards.length === 0 ? (
           <p className="pointer-events-none px-1 pt-1 text-xs text-muted-foreground">
             더블클릭하거나 우클릭해서 카드를 추가하세요.
           </p>
         ) : (
-          <ColumnCardPages
-            cards={sortedCards}
-            onOpenCard={onOpenCard}
-            onAddCard={() => onOpenCreate(column.id)}
-          />
+          <ColumnCardPages onAddCard={() => onOpenCreate(column.id)}>
+            <div className="space-y-2">
+              <SortableContext
+                items={sortedCards.map((c) => c.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                {sortedCards.map((card) => (
+                  <SortableCard
+                    key={card.id}
+                    card={card}
+                    onOpen={onOpenCard}
+                  />
+                ))}
+              </SortableContext>
+            </div>
+          </ColumnCardPages>
         )}
       </div>
 

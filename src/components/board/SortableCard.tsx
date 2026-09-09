@@ -34,6 +34,8 @@ export function SortableCard({ card, onOpen }: SortableCardProps) {
   return (
     <div
       ref={setNodeRef}
+      // break-inside-avoid: 컬럼 가로 페이지(CSS 다단)에서 카드가 페이지 경계에 잘리지 않게.
+      className="break-inside-avoid"
       style={{
         transform: CSS.Transform.toString(transform),
         transition,
