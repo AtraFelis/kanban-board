@@ -67,6 +67,16 @@ export function CardFields({
     );
   }
 
+  // 체크리스트 항목을 위(delta=-1)/아래(delta=+1)로 한 칸 옮긴다. 범위를 벗어나면 무시.
+  function moveChecklistItem(index: number, delta: number) {
+    const next = index + delta;
+    if (next < 0 || next >= value.checklist.length) return;
+    const reordered = [...value.checklist];
+    const [moved] = reordered.splice(index, 1);
+    reordered.splice(next, 0, moved);
+    onChange({ checklist: reordered });
+  }
+
   const doneCount = value.checklist.filter((i) => i.done).length;
 
   return (
@@ -238,7 +248,7 @@ export function CardFields({
           </span>
         </span>
         <ul className="grid gap-0.5">
-          {value.checklist.map((item) => (
+          {value.checklist.map((item, index) => (
             <li
               key={item.id}
               className="group/row flex items-center gap-2 rounded px-1 py-0.5 hover:bg-accent"
@@ -264,18 +274,39 @@ export function CardFields({
               >
                 {item.text}
               </span>
-              <button
-                type="button"
-                aria-label="항목 삭제"
-                onClick={() =>
-                  onChange({
-                    checklist: value.checklist.filter((i) => i.id !== item.id),
-                  })
-                }
-                className="shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/row:opacity-100 hover:text-destructive"
-              >
-                ✕
-              </button>
+              {/* 순서 이동·삭제: 행에 마우스를 올렸을 때만 보인다 */}
+              <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover/row:opacity-100 focus-within:opacity-100">
+                <button
+                  type="button"
+                  aria-label="위로 이동"
+                  disabled={index === 0}
+                  onClick={() => moveChecklistItem(index, -1)}
+                  className="px-0.5 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  aria-label="아래로 이동"
+                  disabled={index === value.checklist.length - 1}
+                  onClick={() => moveChecklistItem(index, 1)}
+                  className="px-0.5 text-muted-foreground hover:text-foreground disabled:opacity-30"
+                >
+                  ↓
+                </button>
+                <button
+                  type="button"
+                  aria-label="항목 삭제"
+                  onClick={() =>
+                    onChange({
+                      checklist: value.checklist.filter((i) => i.id !== item.id),
+                    })
+                  }
+                  className="px-0.5 text-muted-foreground hover:text-destructive"
+                >
+                  ✕
+                </button>
+              </div>
             </li>
           ))}
         </ul>
