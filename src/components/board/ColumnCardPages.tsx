@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useDndMonitor } from "@dnd-kit/core";
 
 interface ColumnCardPagesProps {
   // 페이지로 흘려보낼 카드/섹션 내용. 카드 요소에는 break-inside:avoid가 있어야 한다.
@@ -15,6 +16,10 @@ interface ColumnCardPagesProps {
 const WHEEL_LOCK_MS = 450;
 // 페이지 전환 애니메이션 길이.
 const SCROLL_ANIM_MS = 240;
+// 드래그 중 커서가 가장자리에서 이만큼 안쪽에 오면 페이지를 넘긴다.
+const DRAG_FLIP_EDGE_PX = 44;
+// 드래그 중 페이지 넘김 사이 최소 간격.
+const DRAG_FLIP_LOCK_MS = 550;
 
 // 컬럼의 카드가 세로로 넘칠 때, 스크롤바 대신 스마트폰 홈화면처럼 가로 페이지로 나눈다.
 // CSS 다단(column-width = 컨테이너 폭)으로 내용을 아래로 채우다 넘치면 오른쪽 페이지로 흐른다.
@@ -69,6 +74,39 @@ export function ColumnCardPages({
     },
     [pageCount, animateScrollLeft],
   );
+
+  // 드래그 중 커서가 컨테이너 좌/우 가장자리에 닿으면 페이지를 넘긴다.
+  // (@dnd-kit 자동 스크롤은 overflow:hidden이라 안 먹으므로 직접 처리 —
+  //  항상 페이지 단위로만 이동해 "중간에 멈춤" 상태를 만들지 않는다.)
+  const dragFlipLock = useRef(0);
+  useDndMonitor({
+    onDragMove(event) {
+      if (pageCount <= 1) return;
+      const el = scrollRef.current;
+      const act = event.activatorEvent;
+      if (!el || !(act instanceof MouseEvent)) return;
+      const px = act.clientX + event.delta.x;
+      const py = act.clientY + event.delta.y;
+      const box = el.getBoundingClientRect();
+      // 커서가 이 컨테이너 세로 범위 안에 있을 때만.
+      if (py < box.top || py > box.bottom) return;
+      const now = Date.now();
+      if (now < dragFlipLock.current) return;
+      if (px > box.right - DRAG_FLIP_EDGE_PX && page < pageCount - 1) {
+        dragFlipLock.current = now + DRAG_FLIP_LOCK_MS;
+        goTo(page + 1);
+      } else if (px < box.left + DRAG_FLIP_EDGE_PX && page > 0) {
+        dragFlipLock.current = now + DRAG_FLIP_LOCK_MS;
+        goTo(page - 1);
+      }
+    },
+    onDragEnd() {
+      dragFlipLock.current = 0;
+    },
+    onDragCancel() {
+      dragFlipLock.current = 0;
+    },
+  });
 
   // 페이지 폭·개수를 다시 잰다. 상태는 값이 바뀔 때만 갱신하고(렌더 루프 방지),
   // 스크롤 위치 보정은 DOM에 직접 쓴다.
